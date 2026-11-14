@@ -60,6 +60,7 @@ export default function RootLayout() {
 				<Stack.Screen name="pending" options={{ title: "待审批" }} />
 				<Stack.Screen name="nodes" options={{ title: "节点" }} />
 				<Stack.Screen name="settings" options={{ title: "设置" }} />
+				<Stack.Screen name="connect" options={{ headerShown: false }} />
 				<Stack.Screen name="session/[node]/[id]" options={{ headerShown: false }} />
 			</Stack>
 		</AppShell>

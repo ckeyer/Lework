@@ -256,6 +256,7 @@ Use "lework [command] --help" for more information about a command.`,
 		"timeout for a single node request")
 	flags.DurationVar(&opts.serve.HeartbeatTimeout, "heartbeat-timeout", controlplaneconfig.DefaultHeartbeatTimeout,
 		"idle time after which a node is considered offline")
+	addPairingFlags(root, &opts.pair)
 	flags.StringVar(&opts.agent.configPath, "agent-config", defaultAgentConfigPath(),
 		"path to agent.yaml (defaults to the platform default location)")
 	flags.StringVar(&opts.agent.nodeName, "node-name", "", "override the node name for this process")

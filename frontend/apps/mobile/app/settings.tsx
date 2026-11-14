@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { createClient } from "../src/api/client";
+import { parsePairLink } from "../src/pairing/link";
 import { registerForPush, unregisterPush } from "../src/push/register";
 import { createSecureSettingsStore } from "../src/settings/secure-store";
 import { normalizeBaseUrl } from "../src/settings/settings";
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
 	const { nodes, dirByNode, setInboxDir } = projects;
 	const [baseUrl, setBaseUrl] = useState("");
 	const [token, setToken] = useState("");
+	const [pairLink, setPairLink] = useState("");
 	const [notifications, setNotifications] = useState(true);
 	const [deviceID, setDeviceID] = useState<string | undefined>(undefined);
 	const [busy, setBusy] = useState(false);
@@ -38,6 +40,19 @@ export default function SettingsScreen() {
 			setDeviceID(settings.deviceID);
 		});
 	}, [store]);
+
+	const applyPairLink = () => {
+		try {
+			const payload = parsePairLink(pairLink);
+			setBaseUrl(payload.baseUrl);
+			setToken(payload.token);
+			setFailed(false);
+			setStatus("已填入地址与令牌，点 Save 连接。");
+		} catch (pairError) {
+			setFailed(true);
+			setStatus(pairError instanceof Error ? pairError.message : "配对链接无法解析");
+		}
+	};
 
 	const save = async () => {
 		setBusy(true);
@@ -92,6 +107,20 @@ export default function SettingsScreen() {
 
 	return (
 		<ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+			<Text style={styles.label}>配对链接</Text>
+			<TextInput
+				style={styles.input}
+				value={pairLink}
+				onChangeText={setPairLink}
+				autoCapitalize="none"
+				autoCorrect={false}
+				placeholder="lework://connect?url=…"
+			/>
+			<Pressable style={styles.pairButton} onPress={applyPairLink}>
+				<Text style={styles.pairButtonText}>从配对链接填入</Text>
+			</Pressable>
+			<Text style={styles.hint}>粘贴 serve 启动时打印的链接，自动填好下面的地址与令牌。</Text>
+
 			<Text style={styles.label}>Server address</Text>
 			<TextInput
 				style={styles.input}
@@ -212,6 +241,15 @@ const styles = StyleSheet.create({
 	},
 	buttonDisabled: { opacity: 0.6 },
 	buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+	pairButton: {
+		alignSelf: "flex-start",
+		borderWidth: 1,
+		borderColor: "#cbd5e1",
+		borderRadius: 8,
+		paddingHorizontal: 10,
+		paddingVertical: 6,
+	},
+	pairButtonText: { fontSize: 13, color: "#0f172a", fontWeight: "600" },
 	status: { marginTop: 12, color: "#166534" },
 	statusFailed: { color: "#b91c1c" },
 	sectionTitle: { marginTop: 16 },

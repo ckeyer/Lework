@@ -113,6 +113,32 @@ pnpm --filter @lework/mobile start
 令牌轮换：在服务端更换 enrollment token 并重启后，手机端 Settings 里改成新
 令牌重新保存即可；旧令牌立即失效，不需要卸载 App。
 
+### 扫码配对（免手填）
+
+控制面启动时会打印一个二维码，扫码即把地址与令牌带进 App：
+
+```bash
+# 安装版 APK：码里是 lework://connect?url=…&token=…
+lework serve --public-url http://dev.ckeyer.com
+
+# Expo Go 调试：码里是 exp://<metro>/--/connect?url=…&token=…
+lework serve --public-url http://dev.ckeyer.com \
+  --expo-url http://dev.ckeyer.com:8082
+```
+
+- `--public-url` 是**手机**访问控制面的地址。不给时退回本机局域网 IP + 监听
+  端口，控制面只监听回环或手机不在同一网段时扫码会连不上。
+- `--expo-url` 指向 Metro（`expo start` 的端口）。Metro 默认端口是 8081，被
+  其它服务占用时用 `-p` 指定，例如 `expo start -p 8082`。
+- 二维码只在 stdout 是终端时输出：链接含 enrollment token，重定向到文件或
+  journal 时不打印，等同于不把令牌写进日志。需要关掉用 `--no-qr`。
+- 扫不动时把终端打印的那行链接粘到 Settings 的「配对链接」里，点「从配对链接
+  填入」，再点 Save。链接两种 scheme 都认。
+
+配对会先把候选配置拿去请求 `GET /api/nodes`，通过后才写入；扫到过期或错误的
+码不会覆盖当前可用的配置。推送开关沿用原有偏好，deviceID 需要重新在设置页
+保存时才登记。
+
 ## 构建 APK
 
 首次使用需要 EAS CLI 与 Expo 账号：

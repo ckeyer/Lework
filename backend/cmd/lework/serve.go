@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -41,6 +42,7 @@ func newServeCommand() *cobra.Command {
 	cfg := controlplaneconfig.Default()
 	enrollmentToken := os.Getenv(envEnrollmentToken)
 	tokenFile := defaultTokenFile()
+	pair := pairOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -63,7 +65,7 @@ Examples:
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runControlPlane(cmd.Context(), cfg, enrollmentToken, tokenFile)
+			return runControlPlane(cmd.Context(), cfg, enrollmentToken, tokenFile, pair, cmd.OutOrStdout())
 		},
 	}
 
@@ -79,6 +81,7 @@ Examples:
 		"timeout for a single node request")
 	flags.DurationVar(&cfg.HeartbeatTimeout, "heartbeat-timeout", controlplaneconfig.DefaultHeartbeatTimeout,
 		"idle time after which a node is considered offline")
+	addPairingFlags(cmd, &pair)
 
 	// The token is a secret: keep the value initialized from the environment
 	// but clear the printed default so help and completion output never show it.
@@ -164,7 +167,15 @@ func (r *controlPlaneRuntime) Close() error {
 }
 
 // runControlPlane 解析注册令牌、装配运行时，并服务到信号触发退出。
-func runControlPlane(parent context.Context, cfg controlplaneconfig.Config, explicitToken, tokenPath string) error {
+//
+// pairingOut 用于启动时打印手机配对二维码；只有终端输出才会真正显示。
+func runControlPlane(
+	parent context.Context,
+	cfg controlplaneconfig.Config,
+	explicitToken, tokenPath string,
+	pair pairOptions,
+	pairingOut io.Writer,
+) error {
 	token, err := controlplaneconfig.ResolveToken(explicitToken, tokenPath)
 	if err != nil {
 		return fmt.Errorf("resolve enrollment token: %w", err)
@@ -179,6 +190,8 @@ func runControlPlane(parent context.Context, cfg controlplaneconfig.Config, expl
 
 	ctx, stopSignals := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
+
+	announcePairing(pairingOut, cfg, pair)
 
 	return runtime.Run(ctx)
 }
