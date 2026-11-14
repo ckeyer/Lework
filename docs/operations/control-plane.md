@@ -65,10 +65,16 @@ lework serve \
 2. 显式 `--agent-config` 指定的文件；文件必须存在，否则启动失败。
 3. 默认路径下的 `agent.yaml`（存在才读取）。
 4. 派生默认值：控制面地址来自 `--listen`，令牌来自控制面解析结果，
-   节点名取主机名，工作目录取用户主目录。
+   节点名取主机名，工作目录取 `/opt/lework/<用户名>/workspace`
+   （用户名取运行进程的 OS 用户，首次启动自动创建该目录）。
 
 默认路径 `agent.yaml` 中显式写出的 `control_plane_url` 与 `enrollment_token`
 优先于派生值，不会被覆盖。
+
+默认工作目录按 OS 用户分层：`/opt/lework/<用户名>/workspace`。同一台机器上
+不同用户各占一层，会话与文件访问仍然受该节点的 `workspace_roots` 约束。只在
+没有显式配置时才会创建这个目录；`--workspace-root` 或 `agent.yaml` 里写出的
+目录不会被自动创建，也不做迁移。
 
 组合模式通常要求 `--listen` 使用固定端口（如 `127.0.0.1:8787`）；未在 agent
 配置中显式指定 `control_plane_url` 时，端口 `0` 会被拒绝，因为 agent 无法通过

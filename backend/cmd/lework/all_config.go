@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -12,13 +14,44 @@ import (
 	controlplaneconfig "github.com/insmtx/lework/backend/internal/controlplane/config"
 )
 
-// userHomeDir、hostname 与 defaultAgentConfigPath 是测试 seam，
-// 生产环境分别使用 os 与平台默认路径的实现。
+// defaultWorkspaceBase 是节点工作目录的父目录。
+//
+// 目录按 OS 用户分层（<base>/<user>/workspace），给同一台机器上的多用户预留；
+// 单用户时它就是一个普通目录。放在 /opt 下而不是用户主目录，避免默认项目
+// 直接挂在 /root 这种带系统权限语义的位置。
+var defaultWorkspaceBase = "/opt/lework"
+
+// currentUsername、hostname 与 defaultAgentConfigPath 是测试 seam，
+// 生产环境分别使用 os/user 与平台默认路径的实现。
 var (
-	userHomeDir            = os.UserHomeDir
+	currentUsername        = osUsername
 	hostname               = os.Hostname
 	defaultAgentConfigPath = defaultConfigPath
 )
+
+// osUsername 返回当前运行用户的名字，用于拼默认工作目录。
+func osUsername() (string, error) {
+	if name := strings.TrimSpace(os.Getenv("USER")); name != "" {
+		return name, nil
+	}
+	entry, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return entry.Username, nil
+}
+
+// defaultWorkspaceRoot 返回节点的默认工作目录。
+func defaultWorkspaceRoot() (string, error) {
+	name, err := currentUsername()
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(name) == "" {
+		return "", errors.New("current user is empty")
+	}
+	return filepath.Join(defaultWorkspaceBase, name, "workspace"), nil
+}
 
 // derivedNodeNameFallback 在取不到主机名时使用，保证组合模式仍能启动。
 const derivedNodeNameFallback = "lework-local"
@@ -60,9 +93,13 @@ func resolveAgentConfig(serveCfg controlplaneconfig.Config, ov agentOverrides) (
 		cfg.NodeName = resolveNodeName()
 	}
 	if len(cfg.WorkspaceRoots) == 0 {
-		root, err := userHomeDir()
+		root, err := defaultWorkspaceRoot()
 		if err != nil {
 			return nil, fmt.Errorf("determine default workspace root: %w (pass --workspace-root to set it explicitly)", err)
+		}
+		// 默认目录在 /opt 下，首次启动通常还不存在；不建的话第一个会话就会被拒。
+		if err := os.MkdirAll(root, 0o755); err != nil {
+			return nil, fmt.Errorf("create default workspace root %s: %w (pass --workspace-root to choose another directory)", root, err)
 		}
 		cfg.WorkspaceRoots = []string{root}
 	}
