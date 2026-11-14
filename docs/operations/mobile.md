@@ -130,7 +130,8 @@ lework serve --public-url http://dev.ckeyer.com \
   端口，控制面只监听回环或手机不在同一网段时扫码会连不上。
 - `--expo-url` 指向 Metro（`expo start` 的端口）。Metro 默认端口是 8081，被
   其它服务占用时用 `-p` 指定，例如 `expo start -p 8082`。
-- 两个地址也可以写进 `--config` 文件，省掉每次启动敲参数（flag 仍然优先）：
+- 两个地址也可以写进统一配置文件 `lework.yaml` 的 `controlplane:` 段，省掉
+  每次启动敲参数（flag 仍然优先）：
 
   ```yaml
   controlplane:
