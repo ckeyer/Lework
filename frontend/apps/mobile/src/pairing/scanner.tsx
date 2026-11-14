@@ -16,15 +16,31 @@ export interface PairScannerProps {
  * 只在识别出合法链接时回调一次：相机每帧都会回调，必须用 ref 去重，
  * 否则一次扫描会连续触发多次连接。识别失败不解码、不关闭，让用户重扫。
  */
+/**
+ * explainScanFailure 把扫描失败翻译成用户能照做的提示。
+ *
+ * 最常见的一种错是扫了 Metro 的二维码：`expo start` 也在终端打印二维码，
+ * 内容是不带查询串的 exp:// 地址，和配对码长得很像。
+ */
+function explainScanFailure(data: string, scanError: unknown): string {
+	const message = scanError instanceof Error ? scanError.message : "二维码无法识别";
+	if (/^exps?:\/\//i.test(data.trim()) && !data.includes("?")) {
+		return "这是 Expo 开发服务器的二维码；请扫控制面启动时打印的那一个（二维码下方带 token 的链接）";
+	}
+	return message;
+}
+
 export function PairScanner({ visible, onClose, onScanned }: PairScannerProps) {
 	const [permission, requestPermission] = useCameraPermissions();
 	const [error, setError] = useState<string | null>(null);
+	const [raw, setRaw] = useState<string | null>(null);
 	const handled = useRef(false);
 
 	useEffect(() => {
 		if (!visible) {
 			handled.current = false;
 			setError(null);
+			setRaw(null);
 			return;
 		}
 		if (permission && !permission.granted && permission.canAskAgain) {
@@ -39,7 +55,10 @@ export function PairScanner({ visible, onClose, onScanned }: PairScannerProps) {
 			handled.current = true;
 			onScanned(payload);
 		} catch (scanError) {
-			setError(scanError instanceof Error ? scanError.message : "二维码无法识别");
+			// 把识别到的原文留在屏幕上：扫错码时（例如顺手扫了 Metro 的二维码）
+			// 用户能直接看出扫到了什么，不用再去猜。
+			setRaw(data);
+			setError(explainScanFailure(data, scanError));
 		}
 	};
 
@@ -79,6 +98,11 @@ export function PairScanner({ visible, onClose, onScanned }: PairScannerProps) {
 				<View style={styles.hintWrap} pointerEvents="none">
 					<Text style={styles.hint}>对准控制面启动时打印的二维码</Text>
 					{error ? <Text style={styles.error}>{error}</Text> : null}
+					{raw ? (
+						<Text style={styles.raw} selectable numberOfLines={4}>
+							识别到的内容：{raw}
+						</Text>
+					) : null}
 				</View>
 
 				<Pressable style={styles.close} onPress={onClose} accessibilityRole="button">
@@ -109,6 +133,12 @@ const styles = StyleSheet.create({
 	hintWrap: { position: "absolute", left: 0, right: 0, bottom: 96, alignItems: "center", gap: 6 },
 	hint: { color: "#e2e8f0", fontSize: 14 },
 	error: { color: "#fca5a5", fontSize: 13, paddingHorizontal: 24, textAlign: "center" },
+	raw: {
+		color: "#cbd5e1",
+		fontSize: 11,
+		paddingHorizontal: 24,
+		textAlign: "center",
+	},
 	close: {
 		position: "absolute",
 		bottom: 32,
