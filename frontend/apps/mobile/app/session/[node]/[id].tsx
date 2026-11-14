@@ -17,7 +17,13 @@ import {
 
 import { sessionRoute } from "../../../src/config";
 import { findProjectForSession } from "../../../src/projects/model";
-import { messageText, shouldRenderMessage, toolParts } from "../../../src/session/messages";
+import { MarkdownBody } from "../../../src/session/markdown";
+import {
+	messageText,
+	rendersMarkdown,
+	shouldRenderMessage,
+	toolParts,
+} from "../../../src/session/messages";
 import { isNearBottom } from "../../../src/session/scroll";
 import { runSend } from "../../../src/session/send-flow";
 import { useSession } from "../../../src/session/use-session";
@@ -117,12 +123,18 @@ function MessageRow({ message }: { message: Message }) {
 	const isUser = message.role === "user";
 	const text = messageText(message);
 	const tools = toolParts(message);
+	// 助手回复可能是 Markdown；用户输入保持纯文本。
+	const markdown = rendersMarkdown(message) && text !== "";
 
 	return (
 		<View style={[styles.turn, isUser ? styles.userTurn : styles.assistantTurn]}>
 			{text ? (
 				<View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-					<Text style={[styles.messageText, isUser && styles.userMessageText]}>{text}</Text>
+					{markdown ? (
+						<MarkdownBody content={text} />
+					) : (
+						<Text style={[styles.messageText, isUser && styles.userMessageText]}>{text}</Text>
+					)}
 				</View>
 			) : null}
 			{!isUser && tools.length > 0 ? (

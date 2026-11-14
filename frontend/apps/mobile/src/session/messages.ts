@@ -20,6 +20,16 @@ export function toolParts(message: Message): ContentPart[] {
 	return message.parts.filter((part) => part.type === "tool");
 }
 
+/**
+ * rendersMarkdown 决定正文是否按 Markdown 渲染。
+ *
+ * 只有助手的回复是 Markdown；用户输入与合成状态保持纯文本，避免把用户打的
+ * 星号、下划线当成格式吞掉。
+ */
+export function rendersMarkdown(message: Message): boolean {
+	return message.role === "assistant";
+}
+
 function failedRun(message: Message): boolean {
 	return message.outcome === "error" || Boolean(message.error);
 }

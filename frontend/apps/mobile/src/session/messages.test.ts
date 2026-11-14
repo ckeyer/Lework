@@ -1,7 +1,7 @@
 import type { Message } from "@lework/api";
 import { describe, expect, it } from "vitest";
 
-import { messageText, shouldRenderMessage, toolParts } from "./messages";
+import { messageText, rendersMarkdown, shouldRenderMessage, toolParts } from "./messages";
 
 function message(overrides: Partial<Message>): Message {
 	return { id: "msg_test", role: "assistant", ...overrides };
@@ -39,6 +39,20 @@ describe("shouldRenderMessage", () => {
 		expect(
 			shouldRenderMessage(message({ error: { type: "model_error", message: "rate limited" } })),
 		).toBe(true);
+	});
+});
+
+describe("rendersMarkdown", () => {
+	it("助手回复按 Markdown 渲染", () => {
+		expect(rendersMarkdown(message({ role: "assistant" }))).toBe(true);
+	});
+
+	it("用户输入保持纯文本，不被 Markdown 改写", () => {
+		expect(rendersMarkdown(message({ role: "user" }))).toBe(false);
+	});
+
+	it("合成的 idle 结束标记不渲染 Markdown", () => {
+		expect(rendersMarkdown(message({ role: "idle" }))).toBe(false);
 	});
 });
 
