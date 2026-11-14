@@ -97,6 +97,9 @@ export default function SettingsScreen() {
 			await store.save({ ...settings, deviceID: nextDeviceID });
 			setDeviceID(nextDeviceID);
 			setBaseUrl(normalized);
+			// 扫码路径只通过 overrides 传令牌，不回填输入框的话，保存成功后
+			// 令牌栏仍是空白，看起来像没拿到令牌，再点 Save 还会报 token is required。
+			setToken(trimmedToken);
 			reloadSettings();
 			setStatus(pushNote ? `Connected. Settings saved. ${pushNote}` : "Connected. Settings saved.");
 		} catch (error) {
