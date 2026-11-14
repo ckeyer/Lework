@@ -53,6 +53,26 @@ func defaultWorkspaceRoot() (string, error) {
 	return filepath.Join(defaultWorkspaceBase, name, "workspace"), nil
 }
 
+// applyDefaultWorkspaceRoots 在未配置 workspace_roots 时补上默认目录并创建。
+//
+// 组合模式与独立 `lework agent` 共用这里，保证两条启动路径的默认值一致。
+// 显式配置的目录保持原样：启动进程不替用户创建、也不迁移已有目录。
+func applyDefaultWorkspaceRoots(cfg *agentdconfig.Config) error {
+	if cfg == nil || len(cfg.WorkspaceRoots) > 0 {
+		return nil
+	}
+	root, err := defaultWorkspaceRoot()
+	if err != nil {
+		return fmt.Errorf("determine default workspace root: %w", err)
+	}
+	// 默认目录在 /opt 下，首次启动通常还不存在；不建的话第一个会话就会被拒。
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return fmt.Errorf("create default workspace root %s: %w", root, err)
+	}
+	cfg.WorkspaceRoots = []string{root}
+	return nil
+}
+
 // derivedNodeNameFallback 在取不到主机名时使用，保证组合模式仍能启动。
 const derivedNodeNameFallback = "lework-local"
 
@@ -93,15 +113,9 @@ func resolveAgentConfig(serveCfg controlplaneconfig.Config, ov agentOverrides) (
 		cfg.NodeName = resolveNodeName()
 	}
 	if len(cfg.WorkspaceRoots) == 0 {
-		root, err := defaultWorkspaceRoot()
-		if err != nil {
-			return nil, fmt.Errorf("determine default workspace root: %w (pass --workspace-root to set it explicitly)", err)
+		if err := applyDefaultWorkspaceRoots(cfg); err != nil {
+			return nil, fmt.Errorf("%w (pass --workspace-root to set it explicitly)", err)
 		}
-		// 默认目录在 /opt 下，首次启动通常还不存在；不建的话第一个会话就会被拒。
-		if err := os.MkdirAll(root, 0o755); err != nil {
-			return nil, fmt.Errorf("create default workspace root %s: %w (pass --workspace-root to choose another directory)", root, err)
-		}
-		cfg.WorkspaceRoots = []string{root}
 	}
 
 	if ov.nodeName != "" {

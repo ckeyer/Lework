@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	agentdconfig "github.com/insmtx/lework/backend/internal/agentd/config"
 	controlplaneconfig "github.com/insmtx/lework/backend/internal/controlplane/config"
 )
 
@@ -112,6 +113,37 @@ func TestResolveAgentConfigMissingUserIsActionable(t *testing.T) {
 	_, err := resolveAgentConfig(serveCfg, agentOverrides{})
 	if err == nil || !strings.Contains(err.Error(), "--workspace-root") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// TestApplyDefaultWorkspaceRoots 覆盖独立 `lework agent` 的默认值：agent.yaml
+// 没写 workspace_roots 时也要落到 /opt/lework/<用户>/workspace 并建好目录。
+func TestApplyDefaultWorkspaceRoots(t *testing.T) {
+	defaultWorkspaceBase = filepath.Join(t.TempDir(), "opt")
+	t.Cleanup(func() { defaultWorkspaceBase = "/opt/lework" })
+	currentUsername = func() (string, error) { return "svc", nil }
+	t.Cleanup(func() { currentUsername = osUsername })
+
+	cfg := &agentdconfig.Config{}
+	if err := applyDefaultWorkspaceRoots(cfg); err != nil {
+		t.Fatalf("applyDefaultWorkspaceRoots: %v", err)
+	}
+	want := filepath.Join(defaultWorkspaceBase, "svc", "workspace")
+	if len(cfg.WorkspaceRoots) != 1 || cfg.WorkspaceRoots[0] != want {
+		t.Fatalf("roots = %v, want [%s]", cfg.WorkspaceRoots, want)
+	}
+	if info, err := os.Stat(want); err != nil || !info.IsDir() {
+		t.Fatalf("default workspace root not created: %v", err)
+	}
+}
+
+func TestApplyDefaultWorkspaceRootsKeepsExplicit(t *testing.T) {
+	cfg := &agentdconfig.Config{WorkspaceRoots: []string{"/srv"}}
+	if err := applyDefaultWorkspaceRoots(cfg); err != nil {
+		t.Fatalf("applyDefaultWorkspaceRoots: %v", err)
+	}
+	if len(cfg.WorkspaceRoots) != 1 || cfg.WorkspaceRoots[0] != "/srv" {
+		t.Fatalf("roots = %v", cfg.WorkspaceRoots)
 	}
 }
 
