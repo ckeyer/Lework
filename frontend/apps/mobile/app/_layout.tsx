@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 
 import { routeFromNotification } from "../src/push/route";
+import { useTheme } from "../src/theme/use-theme";
 import { AppShell } from "../src/ui/app-shell";
 import { DrawerButton } from "../src/ui/top-bar";
 
@@ -24,6 +25,8 @@ function openFromNotification(data: unknown) {
 }
 
 export default function RootLayout() {
+	const theme = useTheme();
+
 	useEffect(() => {
 		const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
 			openFromNotification(response.notification.request.content.data);
@@ -52,8 +55,16 @@ export default function RootLayout() {
 
 	return (
 		<AppShell>
-			<StatusBar style="auto" />
-			<Stack screenOptions={{ headerRight: () => <DrawerButton /> }}>
+			<StatusBar style={theme.scheme === "dark" ? "light" : "dark"} />
+			<Stack
+				screenOptions={{
+					headerRight: () => <DrawerButton />,
+					headerStyle: { backgroundColor: theme.colors.surface },
+					headerTintColor: theme.colors.text,
+					headerTitleStyle: { color: theme.colors.text },
+					contentStyle: { backgroundColor: theme.colors.background },
+				}}
+			>
 				<Stack.Screen name="index" options={{ headerShown: false }} />
 				<Stack.Screen name="projects" options={{ title: "项目" }} />
 				<Stack.Screen name="projects/[key]" options={{ title: "项目" }} />

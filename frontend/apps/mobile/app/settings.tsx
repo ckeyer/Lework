@@ -16,10 +16,14 @@ import { PairScanner } from "../src/pairing/scanner";
 import { registerForPush, unregisterPush } from "../src/push/register";
 import { createSecureSettingsStore } from "../src/settings/secure-store";
 import { normalizeBaseUrl } from "../src/settings/settings";
+import type { Theme } from "../src/theme/theme";
+import { useTheme, useThemedStyles } from "../src/theme/use-theme";
 import { useAppShell, useScreenTitle } from "../src/ui/app-shell-context";
 
 export default function SettingsScreen() {
 	useScreenTitle("设置");
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
 	const store = useMemo(() => createSecureSettingsStore(), []);
 	const { projects, reloadSettings } = useAppShell();
 	const { nodes, dirByNode, setInboxDir } = projects;
@@ -125,6 +129,8 @@ export default function SettingsScreen() {
 				autoCapitalize="none"
 				autoCorrect={false}
 				placeholder="lework://connect?url=…"
+				placeholderTextColor={theme.colors.placeholder}
+				selectionColor={theme.colors.accent}
 			/>
 			<Pressable style={styles.pairButton} onPress={applyPairLink}>
 				<Text style={styles.pairButtonText}>从配对链接填入</Text>
@@ -140,6 +146,8 @@ export default function SettingsScreen() {
 				autoCorrect={false}
 				keyboardType="url"
 				placeholder="https://box:8787"
+				placeholderTextColor={theme.colors.placeholder}
+				selectionColor={theme.colors.accent}
 			/>
 
 			<Text style={styles.label}>Enrollment token</Text>
@@ -151,6 +159,8 @@ export default function SettingsScreen() {
 				autoCorrect={false}
 				secureTextEntry
 				placeholder="shared enrollment token"
+				placeholderTextColor={theme.colors.placeholder}
+				selectionColor={theme.colors.accent}
 			/>
 			<Text style={styles.hint}>
 				The token is stored in the Android keystore and sent only in the Authorization header.
@@ -161,7 +171,12 @@ export default function SettingsScreen() {
 					<Text style={styles.label}>Notifications</Text>
 					<Text style={styles.hint}>Push when a session needs approval.</Text>
 				</View>
-				<Switch value={notifications} onValueChange={setNotifications} />
+				<Switch
+					value={notifications}
+					onValueChange={setNotifications}
+					trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
+					thumbColor={theme.colors.surface}
+				/>
 			</View>
 
 			<Text style={[styles.label, styles.sectionTitle]}>我的目录</Text>
@@ -215,7 +230,11 @@ export default function SettingsScreen() {
 				onPress={() => void save()}
 				disabled={busy}
 			>
-				{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+				{busy ? (
+					<ActivityIndicator color={theme.colors.actionText} />
+				) : (
+					<Text style={styles.buttonText}>Save</Text>
+				)}
 			</Pressable>
 
 			{status ? <Text style={[styles.status, failed && styles.statusFailed]}>{status}</Text> : null}
@@ -233,58 +252,63 @@ export default function SettingsScreen() {
 	);
 }
 
-const styles = StyleSheet.create({
-	container: { padding: 16, gap: 8 },
-	label: { fontSize: 14, fontWeight: "600" },
-	hint: { fontSize: 12, color: "#666" },
-	input: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 8,
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		fontSize: 16,
-	},
-	switchRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		marginTop: 8,
-	},
-	switchText: { flex: 1, gap: 2 },
-	button: {
-		marginTop: 16,
-		backgroundColor: "#0f172a",
-		borderRadius: 8,
-		paddingVertical: 12,
-		alignItems: "center",
-	},
-	buttonDisabled: { opacity: 0.6 },
-	buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-	pairButton: {
-		alignSelf: "flex-start",
-		borderWidth: 1,
-		borderColor: "#cbd5e1",
-		borderRadius: 8,
-		paddingHorizontal: 10,
-		paddingVertical: 6,
-	},
-	pairButtonText: { fontSize: 13, color: "#0f172a", fontWeight: "600" },
-	status: { marginTop: 12, color: "#166534" },
-	statusFailed: { color: "#b91c1c" },
-	sectionTitle: { marginTop: 16 },
-	inbox: { gap: 4, marginTop: 4 },
-	inboxNode: { fontSize: 13, fontWeight: "600", color: "#334155" },
-	roots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-	root: {
-		borderWidth: 1,
-		borderColor: "#cbd5e1",
-		borderRadius: 8,
-		paddingHorizontal: 10,
-		paddingVertical: 6,
-		maxWidth: "100%",
-	},
-	rootActive: { backgroundColor: "#0f172a", borderColor: "#0f172a" },
-	rootText: { fontSize: 12, color: "#334155" },
-	rootTextActive: { color: "#fff" },
-});
+function createStyles(theme: Theme) {
+	const { colors } = theme;
+	return StyleSheet.create({
+		container: { padding: 16, gap: 8 },
+		label: { fontSize: 14, fontWeight: "600", color: colors.text },
+		hint: { fontSize: 12, color: colors.textSecondary },
+		input: {
+			borderWidth: 1,
+			borderColor: colors.inputBorder,
+			backgroundColor: colors.inputBackground,
+			color: colors.text,
+			borderRadius: 8,
+			paddingHorizontal: 12,
+			paddingVertical: 10,
+			fontSize: 16,
+		},
+		switchRow: {
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "space-between",
+			marginTop: 8,
+		},
+		switchText: { flex: 1, gap: 2 },
+		button: {
+			marginTop: 16,
+			backgroundColor: colors.action,
+			borderRadius: 8,
+			paddingVertical: 12,
+			alignItems: "center",
+		},
+		buttonDisabled: { opacity: 0.6 },
+		buttonText: { color: colors.actionText, fontSize: 16, fontWeight: "600" },
+		pairButton: {
+			alignSelf: "flex-start",
+			borderWidth: 1,
+			borderColor: colors.borderStrong,
+			borderRadius: 8,
+			paddingHorizontal: 10,
+			paddingVertical: 6,
+		},
+		pairButtonText: { fontSize: 13, color: colors.text, fontWeight: "600" },
+		status: { marginTop: 12, color: colors.success },
+		statusFailed: { color: colors.danger },
+		sectionTitle: { marginTop: 16 },
+		inbox: { gap: 4, marginTop: 4 },
+		inboxNode: { fontSize: 13, fontWeight: "600", color: colors.textStrong },
+		roots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+		root: {
+			borderWidth: 1,
+			borderColor: colors.borderStrong,
+			borderRadius: 8,
+			paddingHorizontal: 10,
+			paddingVertical: 6,
+			maxWidth: "100%",
+		},
+		rootActive: { backgroundColor: colors.action, borderColor: colors.action },
+		rootText: { fontSize: 12, color: colors.textStrong },
+		rootTextActive: { color: colors.actionText },
+	});
+}

@@ -30,6 +30,8 @@ import { useSession } from "../../../src/session/use-session";
 import { selectSiblingSessions } from "../../../src/sessions/select";
 import { useNodeSessions } from "../../../src/sessions/use-node-sessions";
 import { formatRelativeTime } from "../../../src/sidebar/model";
+import type { Theme } from "../../../src/theme/theme";
+import { useTheme, useThemedStyles } from "../../../src/theme/use-theme";
 import { useAppShell, useScreenTitle } from "../../../src/ui/app-shell-context";
 import { GlobalComposer } from "../../../src/ui/global-composer";
 import { ScreenTopBar } from "../../../src/ui/top-bar";
@@ -63,6 +65,8 @@ function clip(value: string, limit = 4000): string {
 
 /** ToolSection 是展开后的单段内容，输入/输出/错误共用同一套排版。 */
 function ToolSection({ label, value, error }: { label: string; value: string; error?: boolean }) {
+	const styles = useThemedStyles(createStyles);
+
 	return (
 		<View style={styles.toolSection}>
 			<Text style={styles.toolSectionLabel}>{label}</Text>
@@ -77,6 +81,7 @@ function ToolSection({ label, value, error }: { label: string; value: string; er
  * 没有输入输出的工具（例如纯状态变更）不展开，避免点开一片空白。
  */
 function ToolCall({ part }: { part: ContentPart }) {
+	const styles = useThemedStyles(createStyles);
 	const [expanded, setExpanded] = useState(false);
 	const state = (part.state ?? {}) as ToolState;
 	const status = state.status ?? "running";
@@ -111,6 +116,9 @@ function ToolCall({ part }: { part: ContentPart }) {
 }
 
 function MessageRow({ message }: { message: Message }) {
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
+
 	// 失败的 idle 是唯一会进入列表的 idle 消息：只留一行错误，不显示状态词。
 	if (message.role === "idle") {
 		return (
@@ -131,7 +139,7 @@ function MessageRow({ message }: { message: Message }) {
 			{text ? (
 				<View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
 					{markdown ? (
-						<MarkdownBody content={text} />
+						<MarkdownBody content={text} scheme={theme.scheme} />
 					) : (
 						<Text style={[styles.messageText, isUser && styles.userMessageText]}>{text}</Text>
 					)}
@@ -156,6 +164,8 @@ function ApprovalCard({
 	permission: PendingPermission;
 	onReply: (decision: "once" | "always" | "reject", message?: string) => Promise<void>;
 }) {
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
 	const [rejecting, setRejecting] = useState(false);
 	const [reason, setReason] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -194,6 +204,8 @@ function ApprovalCard({
 					value={reason}
 					onChangeText={setReason}
 					placeholder="Reason (optional)"
+					placeholderTextColor={theme.colors.placeholder}
+					selectionColor={theme.colors.accent}
 					editable={!busy}
 				/>
 			) : null}
@@ -246,6 +258,9 @@ function SessionSwitcher({
 	onPick: (id: string) => void;
 	onClose: () => void;
 }) {
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
+
 	return (
 		<Pressable style={styles.backdrop} onPress={onClose}>
 			<View style={styles.sheet}>
@@ -266,7 +281,7 @@ function SessionSwitcher({
 					)}
 					ListEmptyComponent={
 						loading ? (
-							<ActivityIndicator style={styles.sheetLoading} />
+							<ActivityIndicator style={styles.sheetLoading} color={theme.colors.accent} />
 						) : (
 							<Text style={styles.hint}>这个项目下还没有会话</Text>
 						)
@@ -279,6 +294,8 @@ function SessionSwitcher({
 
 export default function SessionScreen() {
 	const params = useLocalSearchParams<{ node: string; id: string }>();
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
 	const nodeID = param(params.node);
 	const sessionID = param(params.id);
 
@@ -397,7 +414,7 @@ export default function SessionScreen() {
 	if (settingsLoading) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator />
+				<ActivityIndicator color={theme.colors.accent} />
 			</View>
 		);
 	}
@@ -518,153 +535,157 @@ export default function SessionScreen() {
 	);
 }
 
-const styles = StyleSheet.create({
-	screen: { flex: 1 },
-	center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
-	title: { fontSize: 18, fontWeight: "600" },
-	hint: { color: "#666", textAlign: "center" },
-	error: { color: "#b91c1c", paddingHorizontal: 16, paddingTop: 8 },
-	stopButton: { paddingHorizontal: 6, paddingVertical: 6 },
-	stopText: { fontSize: 13, color: "#475569" },
-	messages: { flex: 1 },
-	messagesContent: { flexGrow: 1, justifyContent: "flex-end", padding: 16, gap: 12 },
-	approvals: { gap: 10, marginBottom: 12 },
-	approval: {
-		borderWidth: 1,
-		borderColor: "#f59e0b",
-		backgroundColor: "#fffbeb",
-		borderRadius: 12,
-		padding: 12,
-		gap: 8,
-	},
-	approvalTitle: { fontSize: 14, fontWeight: "700", color: "#92400e" },
-	approvalAction: { fontSize: 15, fontWeight: "600" },
-	approvalMessage: { fontSize: 13, color: "#475569" },
-	resources: { gap: 4 },
-	resource: {
-		fontFamily: "monospace",
-		fontSize: 12,
-		color: "#334155",
-		backgroundColor: "#f1f5f9",
-		borderRadius: 6,
-		paddingHorizontal: 8,
-		paddingVertical: 6,
-	},
-	approvalButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
-	turn: { gap: 6 },
-	userTurn: { alignItems: "flex-end" },
-	assistantTurn: { alignItems: "flex-start" },
-	bubble: { maxWidth: "82%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
-	userBubble: { backgroundColor: "#2563eb", borderBottomRightRadius: 4 },
-	assistantBubble: { backgroundColor: "#f1f5f9", borderTopLeftRadius: 4 },
-	messageText: { fontSize: 15, lineHeight: 21, color: "#0f172a" },
-	userMessageText: { color: "#ffffff" },
-	tools: { width: "100%", gap: 6 },
-	toolCard: {
-		alignSelf: "flex-start",
-		maxWidth: "88%",
-		borderWidth: 1,
-		borderColor: "#e2e8f0",
-		backgroundColor: "#ffffff",
-		borderRadius: 12,
-		overflow: "hidden",
-	},
-	toolHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 10,
-		paddingVertical: 8,
-	},
-	toolChevron: { width: 12, fontSize: 12, color: "#94a3b8" },
-	toolName: {
-		flexShrink: 1,
-		fontFamily: "monospace",
-		fontSize: 13,
-		fontWeight: "600",
-		color: "#0f172a",
-	},
-	toolStatus: { marginLeft: "auto", fontSize: 11, color: "#64748b" },
-	toolStatusError: { color: "#b91c1c" },
-	toolBody: { borderTopWidth: 1, borderTopColor: "#f1f5f9", padding: 10, gap: 8 },
-	toolSection: { gap: 4 },
-	toolSectionLabel: {
-		fontSize: 10,
-		fontWeight: "700",
-		color: "#94a3b8",
-		textTransform: "uppercase",
-	},
-	toolSectionBody: {
-		fontFamily: "monospace",
-		fontSize: 12,
-		lineHeight: 18,
-		color: "#334155",
-		backgroundColor: "#f8fafc",
-		borderRadius: 8,
-		padding: 8,
-	},
-	toolSectionError: { color: "#b91c1c", backgroundColor: "#fef2f2" },
-	noticeRow: { alignItems: "flex-start", paddingHorizontal: 4 },
-	noticeError: { fontSize: 12, color: "#b91c1c" },
-	turnError: { maxWidth: "88%", paddingHorizontal: 4, fontSize: 12, color: "#b91c1c" },
-	input: {
-		borderWidth: 1,
-		borderColor: "#cbd5e1",
-		borderRadius: 8,
-		paddingHorizontal: 10,
-		paddingVertical: 8,
-		fontSize: 14,
-		backgroundColor: "#fff",
-	},
-	primaryButton: {
-		backgroundColor: "#0f172a",
-		borderRadius: 8,
-		paddingHorizontal: 14,
-		paddingVertical: 10,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	primaryButtonText: { color: "#fff", fontWeight: "600" },
-	secondaryButton: {
-		borderWidth: 1,
-		borderColor: "#cbd5e1",
-		borderRadius: 8,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		alignItems: "center",
-	},
-	secondaryButtonText: { color: "#0f172a", fontWeight: "600" },
-	rejectButton: {
-		borderWidth: 1,
-		borderColor: "#ef4444",
-		borderRadius: 8,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		alignItems: "center",
-	},
-	rejectButtonText: { color: "#b91c1c", fontWeight: "600" },
-	disabled: { opacity: 0.5 },
-	backdrop: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.28)", justifyContent: "flex-end" },
-	sheet: {
-		backgroundColor: "#fff",
-		borderTopLeftRadius: 16,
-		borderTopRightRadius: 16,
-		padding: 16,
-		gap: 8,
-		maxHeight: "65%",
-	},
-	sheetTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-	sheetItem: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: 12,
-		paddingVertical: 12,
-		borderBottomWidth: 1,
-		borderBottomColor: "#f1f5f9",
-	},
-	sheetLabel: { flex: 1, fontSize: 15, color: "#0f172a" },
-	sheetLabelActive: { fontWeight: "700", color: "#2563eb" },
-	sheetTime: { fontSize: 11, color: "#94a3b8" },
-	sheetLoading: { paddingVertical: 24 },
-});
+function createStyles(theme: Theme) {
+	const { colors } = theme;
+	return StyleSheet.create({
+		screen: { flex: 1, backgroundColor: colors.background },
+		center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
+		title: { fontSize: 18, fontWeight: "600", color: colors.text },
+		hint: { color: colors.textSecondary, textAlign: "center" },
+		error: { color: colors.danger, paddingHorizontal: 16, paddingTop: 8 },
+		stopButton: { paddingHorizontal: 6, paddingVertical: 6 },
+		stopText: { fontSize: 13, color: colors.textSecondary },
+		messages: { flex: 1 },
+		messagesContent: { flexGrow: 1, justifyContent: "flex-end", padding: 16, gap: 12 },
+		approvals: { gap: 10, marginBottom: 12 },
+		approval: {
+			borderWidth: 1,
+			borderColor: colors.warningBorder,
+			backgroundColor: colors.warningSurface,
+			borderRadius: 12,
+			padding: 12,
+			gap: 8,
+		},
+		approvalTitle: { fontSize: 14, fontWeight: "700", color: colors.warning },
+		approvalAction: { fontSize: 15, fontWeight: "600", color: colors.text },
+		approvalMessage: { fontSize: 13, color: colors.textSecondary },
+		resources: { gap: 4 },
+		resource: {
+			fontFamily: "monospace",
+			fontSize: 12,
+			color: colors.textStrong,
+			backgroundColor: colors.surfaceSubtle,
+			borderRadius: 6,
+			paddingHorizontal: 8,
+			paddingVertical: 6,
+		},
+		approvalButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
+		turn: { gap: 6 },
+		userTurn: { alignItems: "flex-end" },
+		assistantTurn: { alignItems: "flex-start" },
+		bubble: { maxWidth: "82%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+		userBubble: { backgroundColor: colors.userBubble, borderBottomRightRadius: 4 },
+		assistantBubble: { backgroundColor: colors.messageBubble, borderTopLeftRadius: 4 },
+		messageText: { fontSize: 15, lineHeight: 21, color: colors.text },
+		userMessageText: { color: colors.userBubbleText },
+		tools: { width: "100%", gap: 6 },
+		toolCard: {
+			alignSelf: "flex-start",
+			maxWidth: "88%",
+			borderWidth: 1,
+			borderColor: colors.border,
+			backgroundColor: colors.surface,
+			borderRadius: 12,
+			overflow: "hidden",
+		},
+		toolHeader: {
+			flexDirection: "row",
+			alignItems: "center",
+			gap: 6,
+			paddingHorizontal: 10,
+			paddingVertical: 8,
+		},
+		toolChevron: { width: 12, fontSize: 12, color: colors.textMuted },
+		toolName: {
+			flexShrink: 1,
+			fontFamily: "monospace",
+			fontSize: 13,
+			fontWeight: "600",
+			color: colors.text,
+		},
+		toolStatus: { marginLeft: "auto", fontSize: 11, color: colors.textSecondary },
+		toolStatusError: { color: colors.danger },
+		toolBody: { borderTopWidth: 1, borderTopColor: colors.borderSubtle, padding: 10, gap: 8 },
+		toolSection: { gap: 4 },
+		toolSectionLabel: {
+			fontSize: 10,
+			fontWeight: "700",
+			color: colors.textMuted,
+			textTransform: "uppercase",
+		},
+		toolSectionBody: {
+			fontFamily: "monospace",
+			fontSize: 12,
+			lineHeight: 18,
+			color: colors.textStrong,
+			backgroundColor: colors.surfaceMuted,
+			borderRadius: 8,
+			padding: 8,
+		},
+		toolSectionError: { color: colors.danger, backgroundColor: colors.dangerSurface },
+		noticeRow: { alignItems: "flex-start", paddingHorizontal: 4 },
+		noticeError: { fontSize: 12, color: colors.danger },
+		turnError: { maxWidth: "88%", paddingHorizontal: 4, fontSize: 12, color: colors.danger },
+		input: {
+			borderWidth: 1,
+			borderColor: colors.inputBorder,
+			borderRadius: 8,
+			paddingHorizontal: 10,
+			paddingVertical: 8,
+			fontSize: 14,
+			backgroundColor: colors.inputBackground,
+			color: colors.text,
+		},
+		primaryButton: {
+			backgroundColor: colors.action,
+			borderRadius: 8,
+			paddingHorizontal: 14,
+			paddingVertical: 10,
+			alignItems: "center",
+			justifyContent: "center",
+		},
+		primaryButtonText: { color: colors.actionText, fontWeight: "600" },
+		secondaryButton: {
+			borderWidth: 1,
+			borderColor: colors.borderStrong,
+			borderRadius: 8,
+			paddingHorizontal: 12,
+			paddingVertical: 8,
+			alignItems: "center",
+		},
+		secondaryButtonText: { color: colors.text, fontWeight: "600" },
+		rejectButton: {
+			borderWidth: 1,
+			borderColor: colors.danger,
+			borderRadius: 8,
+			paddingHorizontal: 12,
+			paddingVertical: 8,
+			alignItems: "center",
+		},
+		rejectButtonText: { color: colors.danger, fontWeight: "600" },
+		disabled: { opacity: 0.5 },
+		backdrop: { flex: 1, backgroundColor: colors.modalBackdrop, justifyContent: "flex-end" },
+		sheet: {
+			backgroundColor: colors.surface,
+			borderTopLeftRadius: 16,
+			borderTopRightRadius: 16,
+			padding: 16,
+			gap: 8,
+			maxHeight: "65%",
+		},
+		sheetTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4, color: colors.text },
+		sheetItem: {
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: 12,
+			paddingVertical: 12,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.borderSubtle,
+		},
+		sheetLabel: { flex: 1, fontSize: 15, color: colors.text },
+		sheetLabelActive: { fontWeight: "700", color: colors.accent },
+		sheetTime: { fontSize: 11, color: colors.textMuted },
+		sheetLoading: { paddingVertical: 24 },
+	});
+}

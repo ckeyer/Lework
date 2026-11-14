@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text } from "react-native";
 
 import { sessionRoute } from "../config";
 import { formatRelativeTime } from "../sidebar/model";
+import type { Theme } from "../theme/theme";
+import { useThemedStyles } from "../theme/use-theme";
 
 /**
  * SessionRow 渲染一条会话；标题缺失时退回 id，保证永远可点。
@@ -20,6 +22,7 @@ export function SessionRow({
 	session: Session;
 	nodeName?: string;
 }) {
+	const styles = useThemedStyles(createStyles);
 	const meta = [nodeName ?? "", formatRelativeTime(session.updatedAt)].filter(Boolean).join(" · ");
 
 	return (
@@ -36,13 +39,16 @@ export function SessionRow({
 	);
 }
 
-const styles = StyleSheet.create({
-	row: {
-		paddingVertical: 10,
-		borderBottomWidth: 1,
-		borderBottomColor: "#eef2f7",
-		gap: 2,
-	},
-	title: { fontSize: 15, color: "#0f172a" },
-	meta: { fontSize: 12, color: "#94a3b8" },
-});
+function createStyles(theme: Theme) {
+	const { colors } = theme;
+	return StyleSheet.create({
+		row: {
+			paddingVertical: 10,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.borderSubtle,
+			gap: 2,
+		},
+		title: { fontSize: 15, color: colors.text },
+		meta: { fontSize: 12, color: colors.textMuted },
+	});
+}

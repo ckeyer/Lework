@@ -6,6 +6,8 @@ import { createClient } from "../src/api/client";
 import { buildPairPayload } from "../src/pairing/link";
 import { connectToControlPlane } from "../src/settings/connect";
 import { createSecureSettingsStore } from "../src/settings/secure-store";
+import type { Theme } from "../src/theme/theme";
+import { useTheme, useThemedStyles } from "../src/theme/use-theme";
 import { useAppShell } from "../src/ui/app-shell-context";
 
 function firstParam(value: string | string[] | undefined): string {
@@ -16,6 +18,8 @@ function firstParam(value: string | string[] | undefined): string {
 /** 配对：接收 serve 打印的深链，验证通过后直接进入首页。 */
 export default function ConnectScreen() {
 	const params = useLocalSearchParams<{ url?: string; token?: string }>();
+	const theme = useTheme();
+	const styles = useThemedStyles(createStyles);
 	const store = useMemo(() => createSecureSettingsStore(), []);
 	const { reloadSettings } = useAppShell();
 	const [error, setError] = useState<string | null>(null);
@@ -54,7 +58,7 @@ export default function ConnectScreen() {
 		<View style={styles.screen}>
 			{connecting ? (
 				<>
-					<ActivityIndicator />
+					<ActivityIndicator color={theme.colors.accent} />
 					<Text style={styles.hint}>正在连接控制面…</Text>
 				</>
 			) : (
@@ -70,23 +74,27 @@ export default function ConnectScreen() {
 	);
 }
 
-const styles = StyleSheet.create({
-	screen: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: 24,
-		gap: 12,
-	},
-	title: { fontSize: 18, fontWeight: "600", color: "#0f172a" },
-	hint: { fontSize: 14, color: "#64748b" },
-	error: { fontSize: 14, color: "#b91c1c", textAlign: "center" },
-	primary: {
-		marginTop: 8,
-		paddingHorizontal: 20,
-		paddingVertical: 12,
-		borderRadius: 12,
-		backgroundColor: "#0f172a",
-	},
-	primaryText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-});
+function createStyles(theme: Theme) {
+	const { colors } = theme;
+	return StyleSheet.create({
+		screen: {
+			flex: 1,
+			alignItems: "center",
+			justifyContent: "center",
+			paddingHorizontal: 24,
+			gap: 12,
+			backgroundColor: colors.background,
+		},
+		title: { fontSize: 18, fontWeight: "600", color: colors.text },
+		hint: { fontSize: 14, color: colors.textSecondary },
+		error: { fontSize: 14, color: colors.danger, textAlign: "center" },
+		primary: {
+			marginTop: 8,
+			paddingHorizontal: 20,
+			paddingVertical: 12,
+			borderRadius: 12,
+			backgroundColor: colors.action,
+		},
+		primaryText: { color: colors.actionText, fontSize: 15, fontWeight: "600" },
+	});
+}
