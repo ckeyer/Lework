@@ -1,4 +1,4 @@
-import type { Message, PendingPermission, Session } from "@lework/api";
+import type { ContentPart, Message, PendingPermission, Session } from "@lework/api";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -15,6 +15,7 @@ import {
 
 import { sessionRoute } from "../../../src/config";
 import { findProjectForSession } from "../../../src/projects/model";
+import { messageText, shouldRenderMessage, toolParts } from "../../../src/session/messages";
 import { runSend } from "../../../src/session/send-flow";
 import { useSession } from "../../../src/session/use-session";
 import { selectSiblingSessions } from "../../../src/sessions/select";
@@ -28,31 +29,107 @@ function param(value: string | string[] | undefined): string {
 	return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
-// messageText 优先用聚合文本；部分消息只带 parts，需要现场拼。
-function messageText(message: Message): string {
-	if (message.text) return message.text;
-	if (!message.parts) return "";
-	return message.parts
-		.map((part) => (part.type === "text" ? (part.text ?? "") : ""))
-		.filter((text) => text !== "")
-		.join("\n");
+interface ToolState {
+	status?: string;
+	title?: string;
+	input?: unknown;
+	output?: unknown;
+	content?: unknown;
+	error?: unknown;
+}
+
+function pretty(value: unknown): string {
+	if (value === undefined || value === null) return "";
+	if (typeof value === "string") return value;
+	try {
+		return JSON.stringify(value, null, 2);
+	} catch {
+		return String(value);
+	}
+}
+
+function clip(value: string, limit = 4000): string {
+	return value.length > limit ? `${value.slice(0, limit)}\n… 已截断` : value;
+}
+
+/** ToolSection 是展开后的单段内容，输入/输出/错误共用同一套排版。 */
+function ToolSection({ label, value, error }: { label: string; value: string; error?: boolean }) {
+	return (
+		<View style={styles.toolSection}>
+			<Text style={styles.toolSectionLabel}>{label}</Text>
+			<Text style={[styles.toolSectionBody, error && styles.toolSectionError]}>{clip(value)}</Text>
+		</View>
+	);
+}
+
+/**
+ * ToolCall 是左侧执行过程卡片：默认只露工具名与状态，点一下展开细节。
+ *
+ * 没有输入输出的工具（例如纯状态变更）不展开，避免点开一片空白。
+ */
+function ToolCall({ part }: { part: ContentPart }) {
+	const [expanded, setExpanded] = useState(false);
+	const state = (part.state ?? {}) as ToolState;
+	const status = state.status ?? "running";
+	const input = pretty(state.input);
+	const output = pretty(state.output ?? state.content);
+	const error = pretty(state.error ?? state.title);
+	const hasDetails = Boolean(input || output || error);
+	const failed = status === "error" || Boolean(error);
+
+	return (
+		<View style={styles.toolCard}>
+			<Pressable
+				style={styles.toolHeader}
+				disabled={!hasDetails}
+				onPress={() => setExpanded((open) => !open)}
+			>
+				<Text style={styles.toolChevron}>{hasDetails ? (expanded ? "▾" : "▸") : "•"}</Text>
+				<Text style={styles.toolName} numberOfLines={1}>
+					{part.tool || "tool"}
+				</Text>
+				<Text style={[styles.toolStatus, failed && styles.toolStatusError]}>{status}</Text>
+			</Pressable>
+			{expanded && hasDetails ? (
+				<View style={styles.toolBody}>
+					{input ? <ToolSection label="输入" value={input} /> : null}
+					{output ? <ToolSection label="输出" value={output} /> : null}
+					{error ? <ToolSection label="错误" value={error} error /> : null}
+				</View>
+			) : null}
+		</View>
+	);
 }
 
 function MessageRow({ message }: { message: Message }) {
-	const text = messageText(message);
+	// 失败的 idle 是唯一会进入列表的 idle 消息：只留一行错误，不显示状态词。
+	if (message.role === "idle") {
+		return (
+			<View style={styles.noticeRow}>
+				<Text style={styles.noticeError}>{message.error?.message ?? "本轮执行失败"}</Text>
+			</View>
+		);
+	}
+
 	const isUser = message.role === "user";
+	const text = messageText(message);
+	const tools = toolParts(message);
+
 	return (
-		<View style={[styles.message, isUser ? styles.userMessage : styles.assistantMessage]}>
-			<Text style={styles.messageRole}>{message.role}</Text>
+		<View style={[styles.turn, isUser ? styles.userTurn : styles.assistantTurn]}>
 			{text ? (
-				<Text style={styles.messageText} numberOfLines={40}>
-					{text}
-				</Text>
-			) : (
-				<Text style={styles.messagePlaceholder} numberOfLines={2}>
-					{message.error?.message ?? JSON.stringify(message.parts ?? []).slice(0, 120)}
-				</Text>
-			)}
+				<View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+					<Text style={[styles.messageText, isUser && styles.userMessageText]}>{text}</Text>
+				</View>
+			) : null}
+			{!isUser && tools.length > 0 ? (
+				<View style={styles.tools}>
+					{tools.map((part, index) => (
+						<ToolCall key={part.callID || `${part.tool || "tool"}-${index}`} part={part} />
+					))}
+				</View>
+			) : null}
+			{message.error ? <Text style={styles.turnError}>{message.error.message}</Text> : null}
 		</View>
 	);
 }
@@ -233,6 +310,9 @@ export default function SessionScreen() {
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [switcherOpen, setSwitcherOpen] = useState(false);
 
+	// idle 结束标记与只有 reasoning 的消息在这里就被拦掉，列表里只剩真正的对话。
+	const visibleMessages = useMemo(() => messages.filter(shouldRenderMessage), [messages]);
+
 	useEffect(() => {
 		if (switcherOpen) nodeSessions.refresh();
 	}, [switcherOpen, nodeSessions.refresh]);
@@ -313,7 +393,7 @@ export default function SessionScreen() {
 			<FlatList
 				style={styles.messages}
 				contentContainerStyle={styles.messagesContent}
-				data={messages}
+				data={visibleMessages}
 				keyExtractor={(message) => message.id}
 				renderItem={({ item }) => <MessageRow message={item} />}
 				refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
@@ -383,7 +463,7 @@ const styles = StyleSheet.create({
 	stopButton: { paddingHorizontal: 6, paddingVertical: 6 },
 	stopText: { fontSize: 13, color: "#475569" },
 	messages: { flex: 1 },
-	messagesContent: { padding: 16, gap: 10 },
+	messagesContent: { padding: 16, gap: 12 },
 	approvals: { gap: 10, marginBottom: 12 },
 	approval: {
 		borderWidth: 1,
@@ -407,12 +487,62 @@ const styles = StyleSheet.create({
 		paddingVertical: 6,
 	},
 	approvalButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
-	message: { borderRadius: 12, padding: 10, gap: 4 },
-	userMessage: { backgroundColor: "#eff6ff" },
-	assistantMessage: { backgroundColor: "#f8fafc" },
-	messageRole: { fontSize: 11, fontWeight: "700", color: "#64748b", textTransform: "uppercase" },
-	messageText: { fontSize: 14, lineHeight: 20 },
-	messagePlaceholder: { fontSize: 12, color: "#94a3b8" },
+	turn: { gap: 6 },
+	userTurn: { alignItems: "flex-end" },
+	assistantTurn: { alignItems: "flex-start" },
+	bubble: { maxWidth: "82%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+	userBubble: { backgroundColor: "#2563eb", borderBottomRightRadius: 4 },
+	assistantBubble: { backgroundColor: "#f1f5f9", borderTopLeftRadius: 4 },
+	messageText: { fontSize: 15, lineHeight: 21, color: "#0f172a" },
+	userMessageText: { color: "#ffffff" },
+	tools: { width: "100%", gap: 6 },
+	toolCard: {
+		alignSelf: "flex-start",
+		maxWidth: "88%",
+		borderWidth: 1,
+		borderColor: "#e2e8f0",
+		backgroundColor: "#ffffff",
+		borderRadius: 12,
+		overflow: "hidden",
+	},
+	toolHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 10,
+		paddingVertical: 8,
+	},
+	toolChevron: { width: 12, fontSize: 12, color: "#94a3b8" },
+	toolName: {
+		flexShrink: 1,
+		fontFamily: "monospace",
+		fontSize: 13,
+		fontWeight: "600",
+		color: "#0f172a",
+	},
+	toolStatus: { marginLeft: "auto", fontSize: 11, color: "#64748b" },
+	toolStatusError: { color: "#b91c1c" },
+	toolBody: { borderTopWidth: 1, borderTopColor: "#f1f5f9", padding: 10, gap: 8 },
+	toolSection: { gap: 4 },
+	toolSectionLabel: {
+		fontSize: 10,
+		fontWeight: "700",
+		color: "#94a3b8",
+		textTransform: "uppercase",
+	},
+	toolSectionBody: {
+		fontFamily: "monospace",
+		fontSize: 12,
+		lineHeight: 18,
+		color: "#334155",
+		backgroundColor: "#f8fafc",
+		borderRadius: 8,
+		padding: 8,
+	},
+	toolSectionError: { color: "#b91c1c", backgroundColor: "#fef2f2" },
+	noticeRow: { alignItems: "flex-start", paddingHorizontal: 4 },
+	noticeError: { fontSize: 12, color: "#b91c1c" },
+	turnError: { maxWidth: "88%", paddingHorizontal: 4, fontSize: 12, color: "#b91c1c" },
 	input: {
 		borderWidth: 1,
 		borderColor: "#cbd5e1",
