@@ -109,11 +109,10 @@ export default function SettingsScreen() {
 
 	return (
 		<ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-			<Text style={styles.label}>扫码配对</Text>
 			<Pressable style={styles.pairButton} onPress={() => setScannerOpen(true)}>
-				<Text style={styles.pairButtonText}>打开相机扫二维码</Text>
+				<Text style={styles.pairButtonText}>扫码配对</Text>
 			</Pressable>
-			<Text style={styles.hint}>对着控制面启动时打印的二维码，识别后自动验证并连接。</Text>
+			<Text style={styles.hint}>对着控制面启动时打印的二维码，识别后自动连接。</Text>
 
 			<Text style={styles.label}>配对链接</Text>
 			<TextInput

@@ -134,7 +134,7 @@ lework serve --public-url http://dev.ckeyer.com \
   journal 时不打印，等同于不把令牌写进日志。需要关掉用 `--no-qr`。
 - 扫码入口有两个：
   - **App 外**：手机相机或 Expo Go 直接扫，系统把深链递给 App，落在 `/connect`；
-  - **App 内**：Settings →「扫码配对」→ 打开相机对准终端二维码（`expo-camera`，
+  - **App 内**：Settings →「扫码配对」→ 对准终端二维码（`expo-camera`，
     Expo Go 内置该模块）。识别后复用 Save 的验证与推送登记流程，成功后直接连上。
     相机权限被拒绝时会提示去系统设置，此时用下面的粘贴方式。
 - 扫不动时把终端打印的那行链接粘到 Settings 的「配对链接」里，点「从配对链接
