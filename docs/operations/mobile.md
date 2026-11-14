@@ -130,6 +130,13 @@ lework serve --public-url http://dev.ckeyer.com \
   端口，控制面只监听回环或手机不在同一网段时扫码会连不上。
 - `--expo-url` 指向 Metro（`expo start` 的端口）。Metro 默认端口是 8081，被
   其它服务占用时用 `-p` 指定，例如 `expo start -p 8082`。
+- 两个地址也可以写进 `--config` 文件，省掉每次启动敲参数（flag 仍然优先）：
+
+  ```yaml
+  controlplane:
+    public_url: "http://dev.ckeyer.com"
+    expo_url: "http://dev.ckeyer.com:8082"
+  ```
 - 二维码只在 stdout 是终端时输出：链接含 enrollment token，重定向到文件或
   journal 时不打印，等同于不把令牌写进日志。需要关掉用 `--no-qr`。
 - 扫码入口有两个：

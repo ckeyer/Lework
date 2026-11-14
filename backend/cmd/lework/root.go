@@ -233,6 +233,15 @@ Use "lework [command] --help" for more information about a command.`,
 			// 用 Changed 而不是“是否等于默认值”判断显式性：显式传入的路径
 			// 不存在时 resolveAgentConfig 会直接报错，而不是静默回退。
 			opts.agent.configPathExplicit = cmd.Flags().Changed("agent-config")
+			// 裸 lework 不加载旧 CLI 配置，但要在启动时决定配对地址；
+			// 只有显式给了 --config 才去读，避免默认路径引入无关配置。
+			if cmd.Flags().Changed("config") {
+				section, err := loadPairingSection(cliConfigPath)
+				if err != nil {
+					return err
+				}
+				opts.pair.applyConfigDefaults(section)
+			}
 			return runAllCommand(cmd.Context(), opts)
 		},
 		SilenceUsage:  false,
