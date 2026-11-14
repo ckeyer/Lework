@@ -317,22 +317,44 @@ export default function SessionScreen() {
 	const visibleMessages = useMemo(() => messages.filter(shouldRenderMessage), [messages]);
 
 	const listRef = useRef<FlatList<Message>>(null);
-	// 用户手动翻过历史后，流式更新不能把它拽回底部。
-	const userScrolled = useRef(false);
+	// 首次定位只做一次：先滚到底把最后一条拉进渲染窗口，再对齐它的开头。
+	const initialAligned = useRef(false);
+	// 用户贴着底部时才跟随新消息，否则保持阅读位置。
 	const stickToBottom = useRef(true);
+	const alignAttempts = useRef(0);
+	const lastIndex = useRef(0);
+	lastIndex.current = Math.max(0, visibleMessages.length - 1);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: 切换会话时要重置滚动状态，而不是等 ref 变化
 	useEffect(() => {
-		userScrolled.current = false;
+		initialAligned.current = false;
 		stickToBottom.current = true;
+		alignAttempts.current = 0;
 	}, [nodeID, sessionID]);
 
-	// 内容长高时保持贴底：首次加载直接落在最新一条，之后只在用户本来就
-	// 贴着底部时才跟随，向上翻历史时保持原位。
+	// 目标是最后一条消息的开头，而不是整段内容的末尾——长回复滚到底只会露出
+	// 结尾。比视口短的最后一条会被滚动容器自然夹到底部。
+	const alignToLastMessage = () => {
+		if (initialAligned.current || visibleMessages.length === 0) return;
+		initialAligned.current = true;
+		stickToBottom.current = false;
+		listRef.current?.scrollToIndex({
+			index: lastIndex.current,
+			viewPosition: 0,
+			animated: false,
+		});
+	};
+
 	const handleContentSizeChange = () => {
 		if (visibleMessages.length === 0) return;
-		if (!userScrolled.current || stickToBottom.current) {
-			listRef.current?.scrollToEnd({ animated: userScrolled.current });
+		if (!initialAligned.current) {
+			// 先滚到底，让最后一条进入渲染窗口；下一帧再按它的真实位置对齐。
+			listRef.current?.scrollToEnd({ animated: false });
+			requestAnimationFrame(alignToLastMessage);
+			return;
+		}
+		if (stickToBottom.current) {
+			listRef.current?.scrollToEnd({ animated: true });
 		}
 	};
 
@@ -343,6 +365,23 @@ export default function SessionScreen() {
 			contentHeight: contentSize.height,
 			viewportHeight: layoutMeasurement.height,
 		});
+	};
+
+	// 最后一条还没被测量时 scrollToIndex 会失败：先按平均高度跳到附近，
+	// 等后续渲染把它测出来再重试；多次失败就退回滚到底，不能停在开头。
+	const handleScrollToIndexFailed = (info: { index: number; averageItemLength: number }) => {
+		initialAligned.current = false;
+		alignAttempts.current += 1;
+		if (alignAttempts.current > 4) {
+			initialAligned.current = true;
+			listRef.current?.scrollToEnd({ animated: false });
+			return;
+		}
+		listRef.current?.scrollToOffset({
+			offset: info.averageItemLength * info.index,
+			animated: false,
+		});
+		setTimeout(alignToLastMessage, 50);
 	};
 
 	useEffect(() => {
@@ -434,9 +473,7 @@ export default function SessionScreen() {
 				refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
 				onContentSizeChange={handleContentSizeChange}
 				onScroll={handleScroll}
-				onScrollBeginDrag={() => {
-					userScrolled.current = true;
-				}}
+				onScrollToIndexFailed={handleScrollToIndexFailed}
 				scrollEventThrottle={16}
 				ListHeaderComponent={
 					permissions.length > 0 ? (
