@@ -1,10 +1,12 @@
 import type { ContentPart, Message, PendingPermission, Session } from "@lework/api";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
 	Modal,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
 	Pressable,
 	RefreshControl,
 	StyleSheet,
@@ -16,6 +18,7 @@ import {
 import { sessionRoute } from "../../../src/config";
 import { findProjectForSession } from "../../../src/projects/model";
 import { messageText, shouldRenderMessage, toolParts } from "../../../src/session/messages";
+import { isNearBottom } from "../../../src/session/scroll";
 import { runSend } from "../../../src/session/send-flow";
 import { useSession } from "../../../src/session/use-session";
 import { selectSiblingSessions } from "../../../src/sessions/select";
@@ -313,6 +316,35 @@ export default function SessionScreen() {
 	// idle 结束标记与只有 reasoning 的消息在这里就被拦掉，列表里只剩真正的对话。
 	const visibleMessages = useMemo(() => messages.filter(shouldRenderMessage), [messages]);
 
+	const listRef = useRef<FlatList<Message>>(null);
+	// 用户手动翻过历史后，流式更新不能把它拽回底部。
+	const userScrolled = useRef(false);
+	const stickToBottom = useRef(true);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 切换会话时要重置滚动状态，而不是等 ref 变化
+	useEffect(() => {
+		userScrolled.current = false;
+		stickToBottom.current = true;
+	}, [nodeID, sessionID]);
+
+	// 内容长高时保持贴底：首次加载直接落在最新一条，之后只在用户本来就
+	// 贴着底部时才跟随，向上翻历史时保持原位。
+	const handleContentSizeChange = () => {
+		if (visibleMessages.length === 0) return;
+		if (!userScrolled.current || stickToBottom.current) {
+			listRef.current?.scrollToEnd({ animated: userScrolled.current });
+		}
+	};
+
+	const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+		const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+		stickToBottom.current = isNearBottom({
+			offsetY: contentOffset.y,
+			contentHeight: contentSize.height,
+			viewportHeight: layoutMeasurement.height,
+		});
+	};
+
 	useEffect(() => {
 		if (switcherOpen) nodeSessions.refresh();
 	}, [switcherOpen, nodeSessions.refresh]);
@@ -321,6 +353,8 @@ export default function SessionScreen() {
 		const text = draft.trim();
 		if (!text) return;
 		setActionError(null);
+		// 主动发言后回到最新一条，即使刚才正在往上翻历史。
+		stickToBottom.current = true;
 		try {
 			await runSend(
 				() => send(text),
@@ -391,12 +425,19 @@ export default function SessionScreen() {
 			{actionError ? <Text style={styles.error}>{actionError}</Text> : null}
 
 			<FlatList
+				ref={listRef}
 				style={styles.messages}
 				contentContainerStyle={styles.messagesContent}
 				data={visibleMessages}
 				keyExtractor={(message) => message.id}
 				renderItem={({ item }) => <MessageRow message={item} />}
 				refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
+				onContentSizeChange={handleContentSizeChange}
+				onScroll={handleScroll}
+				onScrollBeginDrag={() => {
+					userScrolled.current = true;
+				}}
+				scrollEventThrottle={16}
 				ListHeaderComponent={
 					permissions.length > 0 ? (
 						<View style={styles.approvals}>
@@ -463,7 +504,7 @@ const styles = StyleSheet.create({
 	stopButton: { paddingHorizontal: 6, paddingVertical: 6 },
 	stopText: { fontSize: 13, color: "#475569" },
 	messages: { flex: 1 },
-	messagesContent: { padding: 16, gap: 12 },
+	messagesContent: { flexGrow: 1, justifyContent: "flex-end", padding: 16, gap: 12 },
 	approvals: { gap: 10, marginBottom: 12 },
 	approval: {
 		borderWidth: 1,
