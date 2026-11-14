@@ -1,6 +1,13 @@
 export type ColorScheme = "light" | "dark";
 
 /**
+ * ThemeMode 是用户在设置里能选的外观：跟随系统，或强制亮/暗。
+ *
+ * 与 ColorScheme 分开：mode 是偏好，scheme 是实际生效的配色。
+ */
+export type ThemeMode = "system" | "light" | "dark";
+
+/**
  * ThemeColors 是手机端的语义色板。
  *
  * 页面只引用语义名，不直接写色值：亮色和暗色各给一套实现，组件不需要知道
@@ -149,4 +156,13 @@ export const darkTheme: Theme = {
 /** themeFor 把系统配色映射到具体色板；未知值按亮色处理。 */
 export function themeFor(scheme: ColorScheme | null | undefined): Theme {
 	return scheme === "dark" ? darkTheme : lightTheme;
+}
+
+/** resolveScheme 把用户偏好与系统配色合成最终生效的配色。 */
+export function resolveScheme(
+	mode: ThemeMode,
+	systemScheme: ColorScheme | null | undefined,
+): ColorScheme {
+	if (mode === "light" || mode === "dark") return mode;
+	return systemScheme === "dark" ? "dark" : "light";
 }

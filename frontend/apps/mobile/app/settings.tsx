@@ -16,13 +16,21 @@ import { PairScanner } from "../src/pairing/scanner";
 import { registerForPush, unregisterPush } from "../src/push/register";
 import { createSecureSettingsStore } from "../src/settings/secure-store";
 import { normalizeBaseUrl } from "../src/settings/settings";
-import type { Theme } from "../src/theme/theme";
+import type { Theme, ThemeMode } from "../src/theme/theme";
+import { useThemePreference } from "../src/theme/theme-context";
 import { useTheme, useThemedStyles } from "../src/theme/use-theme";
 import { useAppShell, useScreenTitle } from "../src/ui/app-shell-context";
+
+const THEME_OPTIONS: { mode: ThemeMode; label: string }[] = [
+	{ mode: "system", label: "跟随系统" },
+	{ mode: "light", label: "亮色" },
+	{ mode: "dark", label: "暗色" },
+];
 
 export default function SettingsScreen() {
 	useScreenTitle("设置");
 	const theme = useTheme();
+	const { mode, setMode } = useThemePreference();
 	const styles = useThemedStyles(createStyles);
 	const store = useMemo(() => createSecureSettingsStore(), []);
 	const { projects, reloadSettings } = useAppShell();
@@ -177,6 +185,23 @@ export default function SettingsScreen() {
 					trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
 					thumbColor={theme.colors.surface}
 				/>
+			</View>
+
+			<Text style={[styles.label, styles.sectionTitle]}>外观</Text>
+			<Text style={styles.hint}>立即生效，仅影响这台手机；默认跟随系统。</Text>
+			<View style={styles.roots}>
+				{THEME_OPTIONS.map((option) => {
+					const active = mode === option.mode;
+					return (
+						<Pressable
+							key={option.mode}
+							style={[styles.root, active && styles.rootActive]}
+							onPress={() => setMode(option.mode)}
+						>
+							<Text style={[styles.rootText, active && styles.rootTextActive]}>{option.label}</Text>
+						</Pressable>
+					);
+				})}
 			</View>
 
 			<Text style={[styles.label, styles.sectionTitle]}>我的目录</Text>

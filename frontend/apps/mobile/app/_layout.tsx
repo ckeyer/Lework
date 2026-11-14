@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 
 import { routeFromNotification } from "../src/push/route";
+import { ThemeProvider } from "../src/theme/theme-context";
 import { useTheme } from "../src/theme/use-theme";
 import { AppShell } from "../src/ui/app-shell";
 import { DrawerButton } from "../src/ui/top-bar";
@@ -25,6 +26,15 @@ function openFromNotification(data: unknown) {
 }
 
 export default function RootLayout() {
+	// ThemeProvider 在导航器外层：设置页改主题时，Stack 头部与所有页面一起重绘。
+	return (
+		<ThemeProvider>
+			<RootNavigator />
+		</ThemeProvider>
+	);
+}
+
+function RootNavigator() {
 	const theme = useTheme();
 
 	useEffect(() => {

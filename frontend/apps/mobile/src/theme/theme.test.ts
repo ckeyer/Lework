@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { darkTheme, lightTheme, themeFor } from "./theme";
+import { darkTheme, lightTheme, resolveScheme, themeFor } from "./theme";
 
 /** relativeLuminance 按 WCAG 计算相对亮度，用于检查两套主题的可读性。 */
 function relativeLuminance(hex: string): number {
@@ -39,6 +39,19 @@ describe("themeFor", () => {
 	it("两套主题的 scheme 与实际主题一致", () => {
 		expect(lightTheme.scheme).toBe("light");
 		expect(darkTheme.scheme).toBe("dark");
+	});
+});
+
+describe("resolveScheme", () => {
+	it("跟随系统时采用系统配色，未知按亮色", () => {
+		expect(resolveScheme("system", "dark")).toBe("dark");
+		expect(resolveScheme("system", "light")).toBe("light");
+		expect(resolveScheme("system", null)).toBe("light");
+	});
+
+	it("手动选择优先于系统", () => {
+		expect(resolveScheme("light", "dark")).toBe("light");
+		expect(resolveScheme("dark", "light")).toBe("dark");
 	});
 });
 
