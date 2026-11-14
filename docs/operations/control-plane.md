@@ -43,6 +43,47 @@ lework serve \
 控制面默认只绑定回环地址。注册令牌用于节点首次注册，不会出现在日志中。
 浏览器打开 `http://127.0.0.1:8787/`。
 
+## 配置文件
+
+`serve`、`agent` 与裸 `lework` 都接受 `--config`，默认读平台配置目录下的
+`lework.yaml`（Linux 是 `/etc/lework/lework.yaml`），不存在时回退同目录的
+`agent.yaml`。一个文件容纳两段，控制面与节点 agent 共用：
+
+```yaml
+controlplane:
+  listen: 127.0.0.1:8787
+  db: ~/.config/Lework/controlplane.db
+  token_file: ~/.config/Lework/enrollment.token
+  request_timeout: 30s
+  heartbeat_timeout: 35s
+  public_url: http://dev.ckeyer.com      # 手机扫码配对
+  expo_url: http://dev.ckeyer.com:8082
+
+agent:
+  node_name: dev-box
+  workspace_roots:
+    - /opt/lework/dev-box/workspace
+  opencode:
+    port: 4096
+    service_mode: shared
+```
+
+优先级固定为 **命令行 flag > 配置文件 > 派生默认**，文件不会覆盖显式 flag。
+
+- `controlplane:` 段供 `serve` 与裸 `lework` 使用；`serve token` 也会读
+  `token_file`，保证两边打印同一个令牌。
+- `agent:` 段供 `agent` 与裸 `lework` 使用。在裸 `lework` 组合模式下，
+  `control_plane_url`、`enrollment_token`、`node_name`、`workspace_roots`
+  留空时分别由 `controlplane.listen`、控制面注册令牌、主机名、
+  `/opt/lework/<用户>/workspace` 派生——这就是「能复用就复用」的部分；
+  独立运行 `agent` 时前三项仍需显式配置。
+- 旧的扁平 `agent.yaml`（顶层直接写 `control_plane_url` 等，没有
+  `controlplane:` 段）仍然被识别，不需要一次性迁移。
+- 只有 `controlplane:` 段的文件不会被误读成空的 agent 配置，此时 agent 仍会
+  回退到默认 `agent.yaml` 或派生默认值。
+- 路径字段支持 `~` 与环境变量展开；`enrollment_token` 不建议写进文件，
+  用 `token_file` 更安全。
+
 ## 一体化启动
 
 裸 `lework` 会在同一进程内同时启动控制面与节点 agent，适合本机单机使用：
@@ -55,21 +96,27 @@ lework serve \
 `make frontend-control-plane` 预先嵌入。裸执行不再打印帮助，帮助入口是
 `lework -h`；`serve` 与 `agent` 子命令仍可各自独立启动。
 
-合并进程的 flag 只挂在根命令上：`--listen`、`--db`、`--enrollment-token`、
-`--token-file`、`--request-timeout`、`--heartbeat-timeout`、`--agent-config`、
-`--node-name`、`--workspace-root`（可重复）。
+合并进程的 flag 只挂在根命令上：`--config`、`--listen`、`--db`、
+`--enrollment-token`、`--token-file`、`--request-timeout`、`--heartbeat-timeout`、
+`--public-url`、`--expo-url`、`--no-qr`、`--agent-config`、`--node-name`、
+`--workspace-root`（可重复）。
+
+`--config` 指向统一配置文件（默认 `/etc/lework/lework.yaml`，缺失时回退
+`agent.yaml`），文件里的 `controlplane:` 与 `agent:` 两段分别补控制面与节点
+agent 的配置，详见上文「配置文件」。
 
 节点 agent 配置按以下优先级合并：
 
 1. 命令行显式覆盖（`--node-name`、`--workspace-root`）。
 2. 显式 `--agent-config` 指定的文件；文件必须存在，否则启动失败。
-3. 默认路径下的 `agent.yaml`（存在才读取）。
-4. 派生默认值：控制面地址来自 `--listen`，令牌来自控制面解析结果，
+3. `--config` 文件的 `agent:` 段（未给 `--agent-config` 时）。
+4. 默认路径下的 `agent.yaml`（存在才读取）。
+5. 派生默认值：控制面地址来自 `--listen`，令牌来自控制面解析结果，
    节点名取主机名，工作目录取 `/opt/lework/<用户名>/workspace`
    （用户名取运行进程的 OS 用户，首次启动自动创建该目录）。
 
-默认路径 `agent.yaml` 中显式写出的 `control_plane_url` 与 `enrollment_token`
-优先于派生值，不会被覆盖。
+默认路径 `agent.yaml` 或 `agent:` 段中显式写出的 `control_plane_url` 与
+`enrollment_token` 优先于派生值，不会被覆盖。
 
 默认工作目录按 OS 用户分层：`/opt/lework/<用户名>/workspace`。同一台机器上
 不同用户各占一层，会话与文件访问仍然受该节点的 `workspace_roots` 约束。只在
@@ -113,22 +160,36 @@ ASCII，不能包含空格、双引号、逗号、分号和反斜杠；不满足
 
 ## 启动节点 Agent
 
+节点 agent 与控制面共用同一个 `lework.yaml`，但独立运行的 agent 仍然需要
+显式的控制面地址、令牌和节点名（它可能连的是另一台机器上的控制面，不能从
+本文件的 `controlplane:` 段猜测）。`workspace_roots` 可以省略，省略时使用
+`/opt/lework/<用户>/workspace` 并自动创建：
+
 ```yaml
-# /etc/lework/agent.yaml（Linux）
-control_plane_url: ws://127.0.0.1:8787/api/agent/connect
-enrollment_token: "<与控制面一致的令牌>"
-node_name: dev-box
-workspace_roots:
-  - /home/me/projects
-opencode:
-  binary: opencode
-  port: 4096
-  service_mode: shared
+# /etc/lework/lework.yaml（Linux）
+controlplane:
+  listen: 127.0.0.1:8787
+agent:
+  control_plane_url: ws://127.0.0.1:8787/api/agent/connect
+  enrollment_token: "<与控制面一致的令牌>"
+  node_name: dev-box
+  workspace_roots:
+    - /home/me/projects
+  opencode:
+    binary: opencode
+    port: 4096
+    service_mode: shared
 ```
 
 ```bash
-lework agent --config /etc/lework/agent.yaml
+lework agent --config /etc/lework/lework.yaml
 ```
+
+裸 `lework`（控制面与 agent 同进程）不需要写 `control_plane_url`、
+`enrollment_token`、`node_name`，它们会从 `--listen`、注册令牌和主机名派生，
+见上文「一体化启动」。
+
+旧的扁平 `agent.yaml`（顶层直接写 `control_plane_url` 等）仍然可用。
 
 `workspace_roots` 限制可创建会话和读取文件的目录；所有路径参数必须是绝对
 路径，文件读取和 PTY 都会在 Agent 侧做边界校验。节点掉线后，控制面的请求

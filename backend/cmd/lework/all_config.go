@@ -85,6 +85,9 @@ type agentOverrides struct {
 	configPathExplicit bool
 	nodeName           string
 	workspaceRoots     []string
+	// base 是统一配置文件 agent: 段的结果；非空且没有显式 --agent-config 时
+	// 优先于默认 agent.yaml，两者内容相同但省掉第二个文件。
+	base *agentdconfig.Config
 }
 
 // resolveAgentConfig 按 k3s 风格的优先级生成节点 agent 配置：
@@ -93,7 +96,7 @@ type agentOverrides struct {
 // 派生阶段只补空字段，文件里显式写出的 control_plane_url 与 enrollment_token
 // 会被原样保留。这是有意的产品决策：组合模式不覆盖用户已经配置好的地址与令牌。
 func resolveAgentConfig(serveCfg controlplaneconfig.Config, ov agentOverrides) (*agentdconfig.Config, error) {
-	cfg, err := loadBaseAgentConfig(ov)
+	cfg, err := baseAgentConfig(ov)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +132,17 @@ func resolveAgentConfig(serveCfg controlplaneconfig.Config, ov agentOverrides) (
 		return nil, fmt.Errorf("agent config: %w", err)
 	}
 	return cfg, nil
+}
+
+// baseAgentConfig 选择 agent 配置的来源：显式 --agent-config 优先，其次是
+// 统一文件的 agent: 段，最后才看默认路径的 agent.yaml。
+func baseAgentConfig(ov agentOverrides) (*agentdconfig.Config, error) {
+	if !ov.configPathExplicit && ov.base != nil {
+		copied := *ov.base
+		copied.WorkspaceRoots = append([]string(nil), ov.base.WorkspaceRoots...)
+		return &copied, nil
+	}
+	return loadBaseAgentConfig(ov)
 }
 
 // loadBaseAgentConfig 读取配置来源：显式路径必须成功，默认路径存在才读取，

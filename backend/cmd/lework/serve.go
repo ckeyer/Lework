@@ -43,6 +43,7 @@ func newServeCommand() *cobra.Command {
 	enrollmentToken := os.Getenv(envEnrollmentToken)
 	tokenFile := defaultTokenFile()
 	pair := pairOptions{}
+	configPath := resolveConfigPath()
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -65,11 +66,19 @@ Examples:
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			file, err := loadConfigFile(configPath, cmd.Flags().Changed("config"))
+			if err != nil {
+				return err
+			}
+			file.applyControlPlane(&cfg, &tokenFile, &pair, cmd.Flags().Changed)
 			return runControlPlane(cmd.Context(), cfg, enrollmentToken, tokenFile, pair, cmd.OutOrStdout())
 		},
 	}
 
 	flags := cmd.Flags()
+	// --config 设为持久 flag，`serve token` 也读同一份配置里的 token_file。
+	cmd.PersistentFlags().StringVar(&configPath, "config", configPath,
+		"unified config file (controlplane: and agent: sections)")
 	flags.StringVar(&cfg.ListenAddr, "listen", controlplaneconfig.DefaultListenAddr,
 		"HTTP listen address (non-loopback requires the enrollment token)")
 	flags.StringVar(&cfg.DBPath, "db", controlplaneconfig.DefaultDBPath(), "path to the control plane SQLite database")
@@ -110,6 +119,15 @@ The token is read from the token file; if the file does not exist, a new token
 is generated and written there so later runs print the same value.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// serve --config 是持久 flag，token 子命令也能读到；配置里写了
+			// token_file 时，两边必须指向同一个文件，否则会打印出另一份令牌。
+			if path, flagErr := cmd.Flags().GetString("config"); flagErr == nil {
+				file, loadErr := loadConfigFile(path, cmd.Flags().Changed("config"))
+				if loadErr != nil {
+					return loadErr
+				}
+				file.applyTokenFile(&tokenFile, cmd.Flags().Changed)
+			}
 			token, err := controlplaneconfig.ResolveToken("", tokenFile)
 			if err != nil {
 				return fmt.Errorf("resolve enrollment token: %w", err)

@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	qrterminal "github.com/mdp/qrterminal/v3"
 	"github.com/spf13/cobra"
 	"github.com/ygpkg/yg-go/logs"
-	"gopkg.in/yaml.v2"
 
 	controlplaneconfig "github.com/insmtx/lework/backend/internal/controlplane/config"
 	"github.com/insmtx/lework/backend/internal/controlplane/pairing"
@@ -33,45 +31,6 @@ func addPairingFlags(cmd *cobra.Command, opts *pairOptions) {
 	flags.StringVar(&opts.expoURL, "expo-url", "",
 		"Metro dev server URL, e.g. http://host:8082; makes the pairing QR an Expo Go link")
 	flags.BoolVar(&opts.noQR, "no-qr", false, "do not print the mobile pairing QR code")
-}
-
-// controlPlaneSection 对应 `--config` 文件里的 controlplane 段。
-type controlPlaneSection struct {
-	PublicURL string `yaml:"public_url"`
-	ExpoURL   string `yaml:"expo_url"`
-}
-
-// loadPairingSection 读取配置文件里的 controlplane 段。
-//
-// 裸 lework 不加载旧 CLI 配置（见 PersistentPreRunE 的说明），但配对地址
-// 属于控制面自己的启动参数，所以只解析这一段；文件里其它段与本功能无关，
-// yaml 会忽略它们。
-func loadPairingSection(path string) (controlPlaneSection, error) {
-	if strings.TrimSpace(path) == "" {
-		return controlPlaneSection{}, nil
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return controlPlaneSection{}, fmt.Errorf("read config %s: %w", path, err)
-	}
-	var file struct {
-		ControlPlane controlPlaneSection `yaml:"controlplane"`
-	}
-	if err := yaml.Unmarshal([]byte(os.ExpandEnv(string(raw))), &file); err != nil {
-		return controlPlaneSection{}, fmt.Errorf("decode config %s: %w", path, err)
-	}
-	return file.ControlPlane, nil
-}
-
-// applyConfigDefaults 用配置文件补齐未显式传入的 flag。
-// 优先级：命令行 flag > 配置文件 > 局域网 IP 兜底。
-func (o *pairOptions) applyConfigDefaults(section controlPlaneSection) {
-	if o.publicURL == "" {
-		o.publicURL = strings.TrimSpace(section.PublicURL)
-	}
-	if o.expoURL == "" {
-		o.expoURL = strings.TrimSpace(section.ExpoURL)
-	}
 }
 
 // announcePairing 打印手机配对二维码与等价链接。

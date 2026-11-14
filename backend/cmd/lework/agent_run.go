@@ -125,7 +125,7 @@ func (a *agentRuntime) Close() error {
 // returned before any network or process work happens, which keeps a broken
 // configuration from leaving a half-started node behind.
 func runAgent(ctx context.Context, configPath string) error {
-	cfg, err := agentdconfig.Load(configPath)
+	cfg, err := loadAgentConfig(configPath)
 	if err != nil {
 		return err
 	}

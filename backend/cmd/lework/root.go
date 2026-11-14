@@ -177,8 +177,9 @@ agent in one process, so a single local install is usable end to end.
 
 Examples:
   lework                                  # control plane + node agent in one process
+  lework --config /etc/lework/lework.yaml
   lework --listen 127.0.0.1:8787
-  lework agent --config /etc/lework/agent.yaml
+  lework agent --config /etc/lework/lework.yaml
   lework serve --enrollment-token <token>
   lework serve token
   lework server --config config.yaml
@@ -233,14 +234,25 @@ Use "lework [command] --help" for more information about a command.`,
 			// 用 Changed 而不是“是否等于默认值”判断显式性：显式传入的路径
 			// 不存在时 resolveAgentConfig 会直接报错，而不是静默回退。
 			opts.agent.configPathExplicit = cmd.Flags().Changed("agent-config")
-			// 裸 lework 不加载旧 CLI 配置，但要在启动时决定配对地址；
-			// 只有显式给了 --config 才去读，避免默认路径引入无关配置。
-			if cmd.Flags().Changed("config") {
-				section, err := loadPairingSection(cliConfigPath)
+
+			// 统一配置文件同时提供控制面与 agent 两段：控制面参数只补未显式
+			// 传入的 flag，agent 段在没给 --agent-config 时作为默认来源。
+			configPath := cliConfigPath
+			explicitConfig := cmd.Flags().Changed("config")
+			if configPath == "" && !explicitConfig {
+				configPath = resolveConfigPath()
+			}
+			file, err := loadConfigFile(configPath, explicitConfig)
+			if err != nil {
+				return err
+			}
+			file.applyControlPlane(&opts.serve, &opts.tokenPath, &opts.pair, cmd.Flags().Changed)
+			if !opts.agent.configPathExplicit {
+				base, err := file.agentBase()
 				if err != nil {
 					return err
 				}
-				opts.pair.applyConfigDefaults(section)
+				opts.agent.base = base
 			}
 			return runAllCommand(cmd.Context(), opts)
 		},
@@ -248,7 +260,8 @@ Use "lework [command] --help" for more information about a command.`,
 		SilenceErrors: false,
 	}
 
-	root.Flags().Var(&configPathValue{&cliConfigPath}, "config", "CLI config file path")
+	root.Flags().Var(&configPathValue{&cliConfigPath}, "config",
+		"config file (lework.yaml with controlplane: and agent: sections)")
 
 	// 组合模式的 flag 只挂在根命令上（local flags），serve/agent 子命令保留
 	// 自己的同名 flag，互不冲突。
