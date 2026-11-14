@@ -17,7 +17,7 @@ App 没有底部 tab bar，也没有常驻导航栏。首页只做一件事：**
 | 项目详情 | `/projects/[key]` | 跨节点会话、主节点选择、输入框 |
 | 待审批 | `/pending` | 汇总所有 `pending_permissions > 0` 的会话 |
 | 节点 | `/nodes` | 诊断用：在线状态、`workspace_roots` |
-| 设置 | `/settings` | 控制面地址、令牌、推送开关 |
+| 设置 | `/settings` | 扫码/粘贴配对、控制面地址、令牌、推送开关 |
 
 主导航是点 `☰` 从左侧滑出的侧边栏（自绘 Modal，不引入 drawer 依赖）：
 
@@ -132,6 +132,11 @@ lework serve --public-url http://dev.ckeyer.com \
   其它服务占用时用 `-p` 指定，例如 `expo start -p 8082`。
 - 二维码只在 stdout 是终端时输出：链接含 enrollment token，重定向到文件或
   journal 时不打印，等同于不把令牌写进日志。需要关掉用 `--no-qr`。
+- 扫码入口有两个：
+  - **App 外**：手机相机或 Expo Go 直接扫，系统把深链递给 App，落在 `/connect`；
+  - **App 内**：Settings →「扫码配对」→ 打开相机对准终端二维码（`expo-camera`，
+    Expo Go 内置该模块）。识别后复用 Save 的验证与推送登记流程，成功后直接连上。
+    相机权限被拒绝时会提示去系统设置，此时用下面的粘贴方式。
 - 扫不动时把终端打印的那行链接粘到 Settings 的「配对链接」里，点「从配对链接
   填入」，再点 Save。链接两种 scheme 都认。
 

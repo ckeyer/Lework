@@ -244,6 +244,9 @@ importers:
       expo:
         specifier: ~58.0.24
         version: 58.0.24(@babel/core@7.29.7)(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-router@58.0.31)(react-dom@19.2.3(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      expo-camera:
+        specifier: ~58.0.14
+        version: 58.0.14(@types/emscripten@1.41.6)(expo@58.0.24)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-constants:
         specifier: ~58.0.16
         version: 58.0.16(expo@58.0.24)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)
@@ -2010,6 +2013,13 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+  '@noxcturnal/noxcturnal-linux-arm64-gnu@0.1.12':
+    resolution: {integrity: sha512-amvAnI2qoxJ/LQjFL1pMQHgym/C+SKPATPDcX6W4wcttBRIDh54PbEWKSaWeFoZ1EsqIF2O4SsDXxjImWGVQzw==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
   '@noxcturnal/noxcturnal-linux-arm64-musl@0.1.12':
     resolution: {integrity: sha512-dTY6LRtSfhZRYRW7Kc4DwAoU8vM0NqopXWWV3RJ8aux8nJ19uhCtRbpEzjIjAT8jG6/Ds5FLEXFqJgVLf4fr2A==}
     engines: {node: '>=18'}
@@ -2035,6 +2045,12 @@ packages:
     resolution: {integrity: sha512-Ma+0PV4nVdRXCYhgNontvuoAczRC11mbZ18LCaWY2aVTc76HjsQQEFPgXqRNlj2/Rjaax5EXUQqyLYYwI+ZB5A==}
     engines: {node: '>=18'}
     cpu: [arm64]
+    os: [win32]
+
+  '@noxcturnal/noxcturnal-win32-x64-msvc@0.1.12':
+    resolution: {integrity: sha512-6QcmxWocHLMfQKT5cy0+KbIYbCpaTd50MC/k6t7pQrfnKMKav5tdQi0lsx3WRrIE/5qUNepNx5iv9DjSJTXrGg==}
+    engines: {node: '>=18'}
+    cpu: [x64]
     os: [win32]
 
   '@oxc-project/types@0.133.0':
@@ -2806,6 +2822,9 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/emscripten@1.41.6':
+    resolution: {integrity: sha512-uN+9i8bFT5CUcZfyIEYDrSueACEyKGbUs5kC/72DGlZZoinh84sJfVV0i8UOJD1asdzkvLPBRrKs41kZ8MdEXg==}
+
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
@@ -3143,6 +3162,9 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
+
+  barcode-detector@3.2.3:
+    resolution: {integrity: sha512-PLinpWGiOQoQH4X+YObWZ6iXeffXKDM3d4vnOD86481SvukIfvkf7jEE/tud9oI4HTDxtDdlHaFilA5Kn7Xa7A==}
 
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
@@ -3969,6 +3991,17 @@ packages:
       expo: '*'
       react: '*'
       react-native: '*'
+
+  expo-camera@58.0.14:
+    resolution: {integrity: sha512-yEiMuJ2d7A+EqsP8rlGIvgaUzdk/rW9CXR6R7WKqludxU3H+JcSUbPC3ldr3ZpmaYlgXP3x+oOO9BfQy7yKK2A==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
 
   expo-constants@58.0.16:
     resolution: {integrity: sha512-sVETnE1ktBMclc2Ve3qNrHhOCCio75a9JdghnJYGbqblmKfrrfE+lO9K4g9kNtmslIBLTK9Dyty6PbubkXs3Yw==}
@@ -6417,6 +6450,10 @@ packages:
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
 
+  tagged-tag@1.0.0:
+    resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
+    engines: {node: '>=20'}
+
   tailwind-merge@3.6.0:
     resolution: {integrity: sha512-uxL7qAVQriqRQPAyK3pj66VqskWqoZ37PW94jwOTwNfq/z9oyu1V+eqrZqtR2+fCiXdYOZe/Modt8GtvqNzu+w==}
 
@@ -6547,6 +6584,10 @@ packages:
   type-fest@0.7.1:
     resolution: {integrity: sha512-Ne2YiiGN8bmrmJJEuTWTLJR32nh/JdL1+PSicowtNb0WFpn59GK8/lfD61bVtzguz7b3PBt74nxpv/Pw5po5Rg==}
     engines: {node: '>=8'}
+
+  type-fest@5.10.0:
+    resolution: {integrity: sha512-NoSdpq/WEiAg5sjmBkmV/hfxv6HJH4NqPNrqjtSO5CwRmpsDfaf4begxW34KdJykH/l1yHtwBWQkCRdoXO8mPA==}
+    engines: {node: '>=20'}
 
   type-is@2.1.0:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
@@ -7027,6 +7068,11 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+  zxing-wasm@3.1.6:
+    resolution: {integrity: sha512-mU7UNuvl+hOT+nlSOQTMHZ2tM8lRMsbjDIp5IO/+HmBl/FOq77q0OSZPJ3cm42A9c1MKU6Uve67FiGdkhsrT9g==}
+    peerDependencies:
+      '@types/emscripten': '>=1.39.6'
 
 snapshots:
 
@@ -8600,6 +8646,9 @@ snapshots:
   '@noxcturnal/noxcturnal-darwin-x64@0.1.12':
     optional: true
 
+  '@noxcturnal/noxcturnal-linux-arm64-gnu@0.1.12':
+    optional: true
+
   '@noxcturnal/noxcturnal-linux-arm64-musl@0.1.12':
     optional: true
 
@@ -8610,6 +8659,9 @@ snapshots:
     optional: true
 
   '@noxcturnal/noxcturnal-win32-arm64-msvc@0.1.12':
+    optional: true
+
+  '@noxcturnal/noxcturnal-win32-x64-msvc@0.1.12':
     optional: true
 
   '@oxc-project/types@0.133.0': {}
@@ -9330,6 +9382,8 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/emscripten@1.41.6': {}
+
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.9
@@ -9728,6 +9782,12 @@ snapshots:
   balanced-match@1.0.2: {}
 
   balanced-match@4.0.4: {}
+
+  barcode-detector@3.2.3(@types/emscripten@1.41.6):
+    dependencies:
+      zxing-wasm: 3.1.6(@types/emscripten@1.41.6)
+    transitivePeerDependencies:
+      - '@types/emscripten'
 
   base64-js@1.5.1: {}
 
@@ -10574,6 +10634,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  expo-camera@58.0.14(@types/emscripten@1.41.6)(expo@58.0.24)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+    dependencies:
+      barcode-detector: 3.2.3(@types/emscripten@1.41.6)
+      expo: 58.0.24(@babel/core@7.29.7)(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.17)(expo-router@58.0.31)(react-dom@19.2.3(react@19.3.0))(react-native-worklets@0.13.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      react: 19.3.0
+      react-native: 0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0)
+    transitivePeerDependencies:
+      - '@types/emscripten'
 
   expo-constants@58.0.16(expo@58.0.24)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3):
     dependencies:
@@ -12502,10 +12571,12 @@ snapshots:
     optionalDependencies:
       '@noxcturnal/noxcturnal-darwin-arm64': 0.1.12
       '@noxcturnal/noxcturnal-darwin-x64': 0.1.12
+      '@noxcturnal/noxcturnal-linux-arm64-gnu': 0.1.12
       '@noxcturnal/noxcturnal-linux-arm64-musl': 0.1.12
       '@noxcturnal/noxcturnal-linux-x64-gnu': 0.1.12
       '@noxcturnal/noxcturnal-linux-x64-musl': 0.1.12
       '@noxcturnal/noxcturnal-win32-arm64-msvc': 0.1.12
+      '@noxcturnal/noxcturnal-win32-x64-msvc': 0.1.12
 
   npm-package-arg@11.0.3:
     dependencies:
@@ -12948,7 +13019,7 @@ snapshots:
   react-native-worklets@0.13.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/generator': 7.29.7
+      '@babel/generator': 7.29.14
       '@babel/plugin-transform-arrow-functions': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-class-properties': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-classes': 7.29.11(@babel/core@7.29.7)
@@ -12958,8 +13029,8 @@ snapshots:
       '@babel/plugin-transform-template-literals': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-unicode-regex': 7.29.7(@babel/core@7.29.7)
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
-      '@babel/traverse': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/traverse': 7.29.14
+      '@babel/types': 7.29.14
       '@jridgewell/remapping': 2.3.5
       '@react-native/metro-config': 0.88.1(@babel/core@7.29.7)
       convert-source-map: 2.0.0
@@ -13689,6 +13760,8 @@ snapshots:
 
   symbol-tree@3.2.4: {}
 
+  tagged-tag@1.0.0: {}
+
   tailwind-merge@3.6.0: {}
 
   tailwindcss@4.3.0: {}
@@ -13814,6 +13887,10 @@ snapshots:
   type-fest@0.21.3: {}
 
   type-fest@0.7.1: {}
+
+  type-fest@5.10.0:
+    dependencies:
+      tagged-tag: 1.0.0
 
   type-is@2.1.0:
     dependencies:
@@ -14207,3 +14284,8 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.3)
 
   zwitch@2.0.4: {}
+
+  zxing-wasm@3.1.6(@types/emscripten@1.41.6):
+    dependencies:
+      '@types/emscripten': 1.41.6
+      type-fest: 5.10.0

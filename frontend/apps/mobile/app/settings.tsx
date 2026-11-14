@@ -11,7 +11,8 @@ import {
 } from "react-native";
 
 import { createClient } from "../src/api/client";
-import { parsePairLink } from "../src/pairing/link";
+import { type PairPayload, parsePairLink } from "../src/pairing/link";
+import { PairScanner } from "../src/pairing/scanner";
 import { registerForPush, unregisterPush } from "../src/push/register";
 import { createSecureSettingsStore } from "../src/settings/secure-store";
 import { normalizeBaseUrl } from "../src/settings/settings";
@@ -25,6 +26,7 @@ export default function SettingsScreen() {
 	const [baseUrl, setBaseUrl] = useState("");
 	const [token, setToken] = useState("");
 	const [pairLink, setPairLink] = useState("");
+	const [scannerOpen, setScannerOpen] = useState(false);
 	const [notifications, setNotifications] = useState(true);
 	const [deviceID, setDeviceID] = useState<string | undefined>(undefined);
 	const [busy, setBusy] = useState(false);
@@ -54,13 +56,13 @@ export default function SettingsScreen() {
 		}
 	};
 
-	const save = async () => {
+	const save = async (overrides?: { baseUrl?: string; token?: string }) => {
 		setBusy(true);
 		setStatus(null);
 		setFailed(false);
 		try {
-			const normalized = normalizeBaseUrl(baseUrl);
-			const trimmedToken = token.trim();
+			const normalized = normalizeBaseUrl(overrides?.baseUrl ?? baseUrl);
+			const trimmedToken = (overrides?.token ?? token).trim();
 			if (!trimmedToken) throw new Error("token is required");
 			const settings = { baseUrl: normalized, token: trimmedToken, notifications, deviceID };
 			// 先验证连通性再落盘，避免存下一个打不通的地址。
@@ -107,6 +109,12 @@ export default function SettingsScreen() {
 
 	return (
 		<ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+			<Text style={styles.label}>扫码配对</Text>
+			<Pressable style={styles.pairButton} onPress={() => setScannerOpen(true)}>
+				<Text style={styles.pairButtonText}>打开相机扫二维码</Text>
+			</Pressable>
+			<Text style={styles.hint}>对着控制面启动时打印的二维码，识别后自动验证并连接。</Text>
+
 			<Text style={styles.label}>配对链接</Text>
 			<TextInput
 				style={styles.input}
@@ -202,13 +210,23 @@ export default function SettingsScreen() {
 
 			<Pressable
 				style={[styles.button, busy && styles.buttonDisabled]}
-				onPress={save}
+				onPress={() => void save()}
 				disabled={busy}
 			>
 				{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
 			</Pressable>
 
 			{status ? <Text style={[styles.status, failed && styles.statusFailed]}>{status}</Text> : null}
+
+			<PairScanner
+				visible={scannerOpen}
+				onClose={() => setScannerOpen(false)}
+				onScanned={(payload: PairPayload) => {
+					setScannerOpen(false);
+					// 扫码即连：复用 Save 的验证与推送登记流程，避免两套逻辑漂移。
+					void save({ baseUrl: payload.baseUrl, token: payload.token });
+				}}
+			/>
 		</ScrollView>
 	);
 }
